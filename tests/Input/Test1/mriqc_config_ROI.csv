@@ -1,0 +1,13 @@
+## Configuration file to run MRIQC
+PARAM_NAME,PARAM_VALUE,Description
+Underlay,T1,Column name for the underlay image (Required)
+Overlay,ROI,Column name for the overlay image (Optional - Default: no overlay)
+Mask,Bmask,Column name for  the mask image (Optional - Default: no mask)
+NumSlice,5,Number of slices to display. Positive int. Negative integer for step size - e.g. -3 for "every 3 slices" (Required)  
+View,ASC,View to display (Axial and/or Sagittal and/or Coronal (Required)
+IsEdge,1,Detect edges in overlay image - e.g. for ROIs (Optional - Default: 0)
+PercLow,2,Scale intensities of underlay image for better contrast (Optional - Default: 0)
+PercHigh,98,Scale intensities of underlay image for better contrast (Optional - Default: 100)
+IsOutSingle,0,Write output to single (1) html file or in a separate html per subject (Optional - Default: 0)
+IsOutNoQC,0,Add QC form on the html (0) or not (1) (Optional - Default: 0)
+ImgWidth,400,Display size of each image snapshot in pixels (Optional - Default: 300)

@@ -1,0 +1,73 @@
+#!usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import os
+import pandas as pd
+from MRISnapshot import create_report_main as crm 
+
+"""usage information"""
+descr = r"""
+----- Description -----
+
+Generates QC report for MRI datasets. The QC report is an html file that contains 
+snapshots of underlay and overlay (optional) images for a set of subjects. The full
+path to input images should be given in a .csv list file. The underlay and overlay 
+columns are defined by the column labels. The user can define how many slices, which 
+view(s), what type of display (edge, transparent overlay) to display (see default 
+config file). 
+
+----- Usage -----
+
+%s [OPTIONS]
+
+OPTIONS (All Required):
+[-l --list   ] <file>       CSV file with input image file names. 
+[-c --config   ] <file>     Configuration file
+[-d --odir     ] <path>     Output directory
+
+----- Notes -----
+
+Format requirements of input file list: 
+- The first column of the file should contain subject IDs
+- Each other column of the file should contain the full path to a specific image type 
+(e.g. T1, FL, BrainMask, ROI, LesionMask, etc.)
+
+----- How to run -----
+
+1. Create a new output folder
+2. Create a list file for your dataset in this folder
+3. Copy and edit the default config file (../shared/mriqc_conf.csv) to this folder
+5. Run the program for the input list and config file
+
+----- Examples and tests -----
+
+Test images, lists, configurations and output mriqc reports are provided in ../test
+
+----- Contact -----
+
+guray.erus\@uphs.upenn.edu
+
+"""
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="MRISnapshot",
+        formatter_class = argparse.RawTextHelpFormatter,
+        description="QC Report",
+    )
+    parser.add_argument("-l", dest="list", type=str, help="CSV file with input image file names", required=True)
+    parser.add_argument("-c", dest="config", type=str, help="Configuration file", required=True)
+    parser.add_argument("-d", dest="odir", type=str, help="Output directory", required=True)
+
+    args = parser.parse_args()
+
+    list_file = os.path.abspath(args.list)
+    config_file = os.path.abspath(args.config)
+    out_dir = os.path.abspath(args.odir)
+    
+    crm.create_report(list_file, config_file, out_dir)
+    
+    
+
