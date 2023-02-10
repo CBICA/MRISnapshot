@@ -22,23 +22,10 @@ config file).
 %s [OPTIONS]
 
 OPTIONS (All Required):
-[-l --list   ] <file>       CSV file with input image file names. 
-[-c --config   ] <file>     Configuration file
-[-d --odir     ] <path>     Output directory
+[-r --run_dir     ] <path>     Reporting directory
 
 ----- Notes -----
 
-Format requirements of input file list: 
-- The first column of the file should contain subject IDs
-- Each other column of the file should contain the full path to a specific image type 
-(e.g. T1, FL, BrainMask, ROI, LesionMask, etc.)
-
------ How to run -----
-
-1. Create a new output folder
-2. Create a list file for your dataset in this folder
-3. Copy and edit the default config file (../shared/mriqc_conf.csv) to this folder
-5. Run the program for the input list and config file
 
 ----- Examples and tests -----
 
@@ -52,22 +39,27 @@ guray.erus\@uphs.upenn.edu
 
 
 if __name__ == "__main__":
+    
+    ## Create parser
     parser = argparse.ArgumentParser(
         prog="MRISnapshot",
         formatter_class = argparse.RawTextHelpFormatter,
         description="QC Report",
     )
-    parser.add_argument("-l", dest="list", type=str, help="CSV file with input image file names", required=True)
-    parser.add_argument("-c", dest="config", type=str, help="Configuration file", required=True)
-    parser.add_argument("-d", dest="odir", type=str, help="Output directory", required=True)
+    parser.add_argument("-d", dest="run_dir", type=str, help="Directory to create the QC report", required=True)
 
+    ## Parse input args
     args = parser.parse_args()
 
-    list_file = os.path.abspath(args.list)
-    config_file = os.path.abspath(args.config)
-    out_dir = os.path.abspath(args.odir)
+    ## Derive args
+    run_dir = os.path.abspath(args.run_dir)    
+    list_file = os.path.join(run_dir, 'list_images.csv')
+    config_file = os.path.join(run_dir, 'config.csv')
+    out_dir = os.path.join(run_dir, 'QCReport')
     
-    crm.create_report(list_file, config_file, out_dir)
-    
-    
+    ## Make out directory
+    if os.path.exists(out_dir) == False:
+        os.makedirs(out_dir)
 
+    ## Create report
+    crm.create_report(list_file, config_file, out_dir)

@@ -28,49 +28,54 @@ logger.setLevel(logging.INFO)    ## FIXME Debug comments will be removed in rele
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 
 
-def check_params(params, file_types):
+def check_params(params, list_col_names):
         
-    ### Check params
-    if params.Underlay not in file_types:
-        sys.exit("The underlay image type (" + params.Underlay + ") is not found in the file list (" + param_filelist + "); please check the headers in the file")
+    logger.info('AAAAAAAAAAAAAAAAAAAAa')
+    logger.info(params)
+        
+    ### Check underlay column in file list
+    if params.ulay_col not in list_col_names:
+        sys.exit("Underlay column missing in image list")
 
-    params['NumOverlay'] = 0
-    if params.Overlay  != '':
-        params.NumOverlay = 1
-        if params.Overlay not in file_types:
-            sys.exit("The overlay image type (" + params.Overlay + ") is not found in the file list (" + param_filelist + "); please check the headers in the file")
+    ### Check overlay columns
+    params['num_olay'] = 0
+    if params.olay_col in list_col_names:
+        params['num_olay'] = 1
+    if params.olay_col2 in list_col_names:
+        params['num_olay'] = 2
 
-    if params.Overlay2  != '':
-        params.NumOverlay = 2
-        if params.Overlay2 not in file_types:
-            sys.exit("The overlay2 image type (" + params.Overlay2 + ") is not found in the file list (" + param_filelist + "); please check the headers in the file")
-
-    params['IsMask'] = 0
-    if params.Mask != '':
-        params.IsMask = 1
-        if params.Mask not in file_types:
-            sys.exit("The mask image type (" + params.Mask + ") is not found in the file list (" + param_filelist + "); please check the headers in the file")
+    ### Check mask column
+    params['num_mask'] = 0
+    if params.mask_col in list_col_names:
+        params['num_mask'] = 1
 
     ### Set additional params
-    params['ImgWidthSingle'] = 1000  ### FIXME
+    params['img_width_single'] = 1000  ### FIXME
+    params['res_size'] = 1 ### FIXME
 
-    params['ressize'] = 1 ### FIXME
+    logger.info(params.sel_vals_olay)
+    logger.info('EE')
 
-    if params.SelValsOverlay == '':
-        params.SelValsOverlay = []
+    ### Convert overlay selected values to list
+    if (params.sel_vals_olay == '') | (params.sel_vals_olay == nan):
+        params.sel_vals_olay = []
     else:
-        params.SelValsOverlay = [int(n) for n in params.SelValsOverlay.str.split('+')]
+
+        logger.info(params.sel_vals_olay)
+        logger.info('EEFFFFF')
         
-    if params.SelValsOverlay2 == '':
-        params.SelValsOverlay = []
+        params.sel_vals_olay = [int(n) for n in params.sel_vals_olay.str.split('+')]
+        
+    ### Convert overlay2 selected values to list
+    if params.sel_vals_olay2 == '':
+        params.sel_vals_olay = []
     else:
-        params.SelValsOverlay2 = [int(n) for n in params.SelValsOverlay2.str.split('+')]
+        params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.str.split('+')]
 
-    if params.IsEdge == 1:
+    ### Update few params
+    if params.is_edge == 1:
         params.Transp = 1
-        print("Warning: IsEdge selected for overlay; transparency reset to 1")
-
-    logger.info(params)
+        logger.warning('is_edge selected for overlay, transparency reset to 1')
 
     return params
 
@@ -118,30 +123,30 @@ def get_img_mat(nii, orient = 'LPS'):
         nii = nii.as_reoriented(transform)
     return nii.get_fdata()
 
-def create_snapshots(params, df_files, dir_snapshots_full, labelID):
+def create_snapshots(params, df_images, dir_snapshots_full, labelID):
     
     # Dictionary with img orientation for different views
     d_orient = {'A':'LPS', 'S':'SLP', 'C':'PSL'}  
     
-    params.NumOverlay = 0 ## FIXME
+    params.num_olay = 0 ## FIXME
     
     
     ### Extract and save snapshots with metadata
     if not os.path.isfile(dir_snapshots_full + os.sep + 'mriqc_img_info_all.pickle'):
 
         mriqc_img_info_all = [];
-        for sub_index, sub_id in enumerate(df_files[labelID]):
+        for sub_index, sub_id in enumerate(df_images[labelID]):
 
             ### Read input images
-            fname_under = df_files.loc[sub_index][params.Underlay]
+            fname_under = df_images.loc[sub_index][params.ulay_col]
             nii_ulay = get_nifti(fname_under)
 
-            fname_over = df_files.loc[sub_index][params.Overlay]
+            fname_over = df_images.loc[sub_index][params.olay_col]
             nii_olay = get_nifti(fname_over)
 
             fname_over2 = 'None'    ## FIXME
             
-            fname_mask = df_files.loc[sub_index][params.Mask]
+            fname_mask = df_images.loc[sub_index][params.mask_col]
             nii_mask = get_nifti(fname_mask)
 
             # Initialize containers to keep image info
@@ -172,7 +177,7 @@ def create_snapshots(params, df_files, dir_snapshots_full, labelID):
                     #img2d_ulay = zoom(img2d_ulay, (scX,scY), order=1)
                     
                     # Create final images and save
-                    if params.NumOverlay == 0:
+                    if params.num_olay == 0:
                         pil_under = imolay.singleImage(img2d_ulay)
                         outimg_noolay_suffix = sub_id + '_orient_' + view + '_slice_' + str(slice_index)
                         pil_under.convert('RGB').save(dir_snapshots_full + os.sep + outimg_noolay_suffix + '.png')
@@ -201,7 +206,7 @@ def create_snapshots(params, df_files, dir_snapshots_full, labelID):
     return mriqc_img_info_all
 
 
-def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, mriqc_img_info_all, outReportName):
+def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, mriqc_img_info_all, out_report):
     ###################################################################
     ### CREATE HTML REPORTS ###########################################
 
@@ -247,18 +252,18 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
             outimg_caption = outimg_caption_all[imgindex]
             
             # Write html page for each snapshot without overlay
-            TEXT_HTML_STR_SINGLE_IMG = html.htmlSnapshot(outimg_noolay_suffix + '.png', 'Fig: ' + str(imgindex) + outimg_caption, outimg_witholay_suffix + '.html', params.ImgWidthSingle);
+            TEXT_HTML_STR_SINGLE_IMG = html.htmlSnapshot(outimg_noolay_suffix + '.png', 'Fig: ' + str(imgindex) + outimg_caption, outimg_witholay_suffix + '.html', params.img_width_single);
             ofp = open(dir_snapshots_full + os.sep + outimg_noolay_suffix + '.html','w')
             ofp.write(TEXT_HTML_STR_SINGLE_IMG)
             ofp.close
 
             # Write html page for each snapshot
-            if params.NumOverlay == 0:
+            if params.num_olay == 0:
                 # Append html code for all snapshots from a subject
                 TEXT_HTML_STR_TMP = html.htmlSubjectAddImage(dir_snapshots + os.sep + outimg_noolay_suffix + '.png', outimg_caption, dir_snapshots + os.sep + outimg_noolay_suffix + '.html')
 
             else:
-                TEXT_HTML_STR_SINGLE_IMG = html.htmlSnapshot(outimg_witholay_suffix + '.png', 'Fig: ' + str(imgindex) + outimg_caption, outimg_noolay_suffix + '.html', params.ImgWidthSingle);
+                TEXT_HTML_STR_SINGLE_IMG = html.htmlSnapshot(outimg_witholay_suffix + '.png', 'Fig: ' + str(imgindex) + outimg_caption, outimg_noolay_suffix + '.html', params.img_width_single);
                 ofp = open(dir_snapshots_full + os.sep + outimg_witholay_suffix + '.html','w')
                 ofp.write(TEXT_HTML_STR_SINGLE_IMG)
                 ofp.close
@@ -308,62 +313,56 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
         file_report = dir_subjects + os.sep + first_sub_id + '_mriqc.html'
 
     TEXT_HTML_MAINPAGE = html.htmlMainPage(file_report)
-    ofp = open(outReportName, 'w')
+    ofp = open(out_report, 'w')
     ofp.write(TEXT_HTML_MAINPAGE)
     ofp.close()
 
 
-def create_report(param_filelist, param_config, param_outdir):
+def create_report(list_file, config_file, out_dir):
 
-    ### Read input file list
+    ## Read input file list
     try:
-        df_files = pd.read_csv(param_filelist)
+        df_images = pd.read_csv(list_file)
+        list_col_names = df_images.columns.values
     except:
-        sys.exit("Could not read list file (" +  param_filelist + "). Aborting operations !!!");
-    file_types = df_files.columns.values
-    labelID = file_types[0]
+        sys.exit("Could not read list file: " + list_file);
 
-    ### Read params from config file
+    ## Read params from config file
     try:
-        dfConf = pd.read_csv(param_config, comment='#', index_col='PARAM_NAME').fillna('')
+        df_conf = pd.read_csv(config_file)
     except:
-        sys.exit("Could not read config file (" +  param_config + "). Aborting operations !!!");
-    params = dfConf[dfConf.columns[0]].T
-    
-    
+        sys.exit("Could not read config file: " +  config_file);
+    params = df_conf.set_index('ParamName').ParamValue
+
+    ## Convert numeric params
     df_tmp = pd.to_numeric(params, errors='coerce')
     params = df_tmp.combine_first(params)
 
-    #logger.info(params)
-    #input()
-
-    params = check_params(params, file_types)
-
+    ## Verify params
+    params = check_params(params, list_col_names)
 
     ### Check output file
-    outReportName = param_outdir + os.sep + 'mriqc_report.html'
-    if os.path.exists(outReportName):
-        sys.exit("Output report exists, delete it first and rerun: " + outReportName);
+    out_report = os.path.join(out_dir, 'qcreport.html')
+    if os.path.exists(out_report):
+        sys.exit("Output report exists: " + out_report);
 
     ### Create out dirs
-    create_dir(param_outdir)    
     dir_subjects = 'subjects'
-    dir_subjects_full = param_outdir + os.sep + dir_subjects
-
+    dir_subjects_full = os.path.join(out_dir, dir_subjects)
     dir_snapshots = 'snapshots'
-    dir_snapshots_full = dir_subjects_full + os.sep + dir_snapshots
+    dir_snapshots_full = os.path.join(out_dir, dir_snapshots)
+    dir_scripts = os.path.join(dir_subjects_full, + 'scripts')
 
+    create_dir(out_dir)
     create_dir(dir_subjects_full)
     create_dir(dir_snapshots_full)
-
-    dir_scripts = dir_subjects_full + os.sep + 'scripts'
     create_dir(dir_scripts)
     
     ### Create snapshots
-    mriqc_img_info_all = create_snapshots(params, df_files, dir_snapshots_full, labelID)
+    mriqc_img_info_all = create_snapshots(params, df_images, dir_snapshots_full)
     
     ### Create report
-    create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, mriqc_img_info_all, outReportName)
+    create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, mriqc_img_info_all, out_report)
     
     
     
