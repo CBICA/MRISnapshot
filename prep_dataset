@@ -1,0 +1,75 @@
+#!usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import os
+import pandas as pd
+from MRISnapshot import prep_dataset_main as pdm
+
+## Set logger  ## FIXME to be updated
+import logging
+format='%(levelname)-8s [%(filename)s : %(lineno)d - %(funcName)20s()] %(message)s'
+format='%(levelname)-8s %(message)s'
+logging.basicConfig(level=logging.DEBUG, format = '\n' + format, datefmt='%Y-%m-%d:%H:%M:%S')
+logger = logging.getLogger(__name__)
+
+##logger.setLevel(logging.DEBUG)      ## While debugging
+logger.setLevel(logging.INFO)    ## FIXME Debug comments will be removed in release version
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+
+"""usage information"""
+descr = r"""
+----- Description -----
+Prepares input data for running create_report.
+
+----- Usage -----
+
+%s [OPTIONS]
+
+OPTIONS (Required):
+[-i --indir   ] <path>      Input image directory
+[--suff_ulay   ] <text>     Suffix of underlay images
+[-d --outdir     ] <path>     Output directory
+
+OPTIONS (Optional):
+[--suff_mask   ] <text>     Suffix of mask images (default: no mask image)
+[--suff_olay   ] <text>     Suffix of overlay images (default: no overlay image)
+[--suff_olay2   ] <text>     Suffix of second overlay images (default: no second overlay image)
+
+----- Examples and tests -----
+
+Test images, lists, configurations and output mriqc reports are provided in ../test
+
+----- Contact -----
+
+guray.erus\@uphs.upenn.edu
+"""
+
+
+if __name__ == "__main__":
+    
+    ## Create parser
+    parser = argparse.ArgumentParser(
+        prog="MRISnapshot",
+        formatter_class = argparse.RawTextHelpFormatter,
+        description="QC Report",
+    )
+    parser.add_argument("-i", dest="indir", type=str, help="Input image directory", required=True)
+    parser.add_argument("--s_ulay", dest="s_ulay", type=str, help="Suffix of underlay images", required=True)
+    parser.add_argument("-d", dest="outdir", type=str, help="Output directory", required=True)
+    parser.add_argument("--s_mask", dest="s_mask", type=str, help="Suffix of mask images", required=False)
+    parser.add_argument("--s_olay", dest="s_olay", type=str, help="Suffix of overlay images", required=False)
+    parser.add_argument("--s_olay2", dest="s_olay2", type=str, help="Suffix of second overlay images", required=False)
+
+    ## Parse input args
+    params = parser.parse_args()
+
+    ## Update args
+    params.in_dir = os.path.abspath(params.indir)
+    params.out_dir = os.path.abspath(params.outdir)
+    
+    ## Prepare data
+    pdm.prep_dataset(params)
+    
+    
+

@@ -49,6 +49,10 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+# test outputs
+tests/Output
+tests/tmp*
+
 .*
 __pycache__
 !.gitignore

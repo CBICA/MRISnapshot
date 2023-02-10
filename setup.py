@@ -27,7 +27,7 @@ setup(name='mri_snapshot',
         'matplotlib'
     ],
     scripts=[
-        'create_report',
+        'create_report', 'prep_dataset'
     ],
     classifiers=[
         'Intended Audience :: Science/Research',
