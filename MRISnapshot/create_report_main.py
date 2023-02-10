@@ -106,29 +106,13 @@ def check_params(params, file_types):
 
     return params
 
-def create_out_dirs(outdir):
+def create_dir(dir_name):
     ### Create output directories
     try:        
-        dir_subjects = 'subjects'
-        dir_subjects_full = outdir + os.sep + dir_subjects
-
-        dir_snapshots = 'snapshots'
-        dir_snapshots_full = dir_subjects_full + os.sep + dir_snapshots
-
-        if outdir and not os.path.exists(outdir):
-                os.makedirs(outdir)
-
-        if dir_subjects_full and not os.path.exists(dir_subjects_full):
-                os.makedirs(dir_subjects_full)
-
-        if dir_snapshots_full and not os.path.exists(dir_snapshots_full):
-                os.makedirs(dir_snapshots_full)
-
-        dir_scripts = dir_subjects_full + os.sep + 'scripts'
-        if dir_scripts and not os.path.exists(dir_scripts):
-                os.makedirs(dir_scripts)
+        if not os.path.exists(dir_name):
+                os.makedirs(dir_name)
     except:
-        sys.exit("Could not create output folders. Aborting operations !!!");
+        sys.exit("Could not create out folder !!!");
 
 
 def create_log_files(outdir):
@@ -146,22 +130,24 @@ def copy_js(outdir):
     #shutil.copy(EXEC_DIR + os.sep + 'utils' + os.sep + 'loadback.js', dir_scripts)
 
 
-def create_snapshots():
+def create_snapshots(params, df_files, dir_snapshots_full, labelID):
     ### If slices were not already extracted, extract them and save meta data
     if not os.path.isfile(dir_snapshots_full + os.sep + 'mriqc_img_info_all.pickle'):
 
-        writeLog(logFile,'''------------------------ 
-    Extracting snapshots ... (''' + time.strftime("%Y-%m-%d_%H-%M-%S") + ')') 
-
         mriqc_img_info_all = [];
-
-        for sub_index, sub_id in enumerate(dfFiles[labelID]):
-
-            writeLog(logFile,"        Sub " + str(sub_index) + ": " + sub_id) 
+        for sub_index, sub_id in enumerate(df_files[labelID]):
+            
+            print(params.Underlay)
+            print(df_files)
+            input('eee')
 
             ### Read the input images
             try:
-                fname_under = dfFiles.loc[sub_index][params.Underlay]
+                fname_under = df_files.loc[sub_index][params.Underlay]
+
+                print(fname_under)
+                input('deeesss')
+
                 nii_under = nib.load( os.path.join( fname_under ) )
                 img3d_under = nii_under.get_fdata()
                 hdr_under = nii_under.header
@@ -176,15 +162,16 @@ def create_snapshots():
                 print(nii_under.header.get_zooms())
                 
             except:
-                msg="Could not read underlay image for subject " + str(sub_index) + ":" + sub_id
-                writeLog(errFile, msg)
+                print('Could not read ')
+                input('deee')
+
                 continue
 
             fname_over = ''
             fname_over2 = ''
             if params.NumOverlay > 0:
                 try:
-                    fname_over = dfFiles.loc[sub_index][params.Overlay]
+                    fname_over = df_files.loc[sub_index][params.Overlay]
                     nii_over = nib.load( os.path.join( fname_over ) )
                     img3d_over = nii_over.get_fdata()
                     hdr_over = nii_over.header
@@ -194,7 +181,7 @@ def create_snapshots():
                 
             if params.NumOverlay > 1:
                 try:
-                    fname_over2 = dfFiles.loc[sub_index][params.Overlay2]
+                    fname_over2 = df_files.loc[sub_index][params.Overlay2]
                     nii_over2 = nib.load( os.path.join( fname_over2 ) )
                     img3d_over2 = nii_over2.get_fdata()
                     hdr_over2 = nii_over2.header
@@ -205,7 +192,7 @@ def create_snapshots():
             img3d_mask = img3d_under * 0 + 1    ## Mask with all voxels set to 1
             if params.IsMask == 1:
                 try:
-                    fname_mask = dfFiles.loc[sub_index][params.Mask]
+                    fname_mask = df_files.loc[sub_index][params.Mask]
                     nii_mask = nib.load( os.path.join( fname_mask ) )
                     img3d_mask = nii_mask.get_fdata()
                     img3d_mask = (img3d_mask>0).astype(int)
@@ -406,11 +393,10 @@ def create_snapshots():
     else:
         mriqc_img_info_all = pickle.load( open( dir_snapshots_full + os.sep + 'mriqc_img_info_all.pickle', "rb" ) )
 
-        writeLog(logFile,'''------------------------Reading pre-calculated snapshots ... (''' + time.strftime("%Y-%m-%d_%H-%M-%S") + ')/n') 
+    return mriqc_img_info_all
 
 
-
-def create_html_report():
+def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, mriqc_img_info_all, outReportName):
     ###################################################################
     ### CREATE HTML REPORTS ###########################################
 
@@ -418,9 +404,6 @@ def create_html_report():
     ###        - single snapshots with/without overlay for each selected slice, 
     ###        - all snapshots from a subject together
     ###        - all subjects together
-
-    writeLog(logFile,'''------------------------ 
-    Creating mriqc reports ... (''' + time.strftime("%Y-%m-%d_%H-%M-%S") + ')')
 
     # Write the stylesheet
     TEXT_HTML_STR_STYLESHEET = html.html_stylesheet(params.ImgWidth);
@@ -442,8 +425,6 @@ def create_html_report():
         prev_sub_id = mriqc_img_info_all[np.max([0,itemindex-1])]['sub_id']
         next_sub_id = mriqc_img_info_all[np.min([numItem-1,itemindex+1])]['sub_id']
 
-        writeLog(logFile,"        Sub " + str(itemindex) + ": " + sub_id) 
-        
         fname_under = item['fname_under']
         fname_over = item['fname_over']
         fname_over2 = item['fname_over2']
@@ -525,19 +506,16 @@ def create_html_report():
     ofp = open(outReportName, 'w')
     ofp.write(TEXT_HTML_MAINPAGE)
     ofp.close()
-        
-    writeLog(logFile,'''------------------------ 
-    Mriqc reports created ... (''' + time.strftime("%Y-%m-%d_%H-%M-%S") + ')\n') 
 
 
 def create_report(param_filelist, param_config, param_outdir):
 
     ### Read input file list
     try:
-        dfFiles = pd.read_csv(param_filelist)
+        df_files = pd.read_csv(param_filelist)
     except:
         sys.exit("Could not read list file (" +  param_filelist + "). Aborting operations !!!");
-    file_types = dfFiles.columns.values
+    file_types = df_files.columns.values
     labelID = file_types[0]
 
     ### Read params from config file
@@ -557,13 +535,24 @@ def create_report(param_filelist, param_config, param_outdir):
         sys.exit("Output report exists, delete it first and rerun: " + outReportName);
 
     ### Create out dirs
-    create_out_dirs(param_outdir)
+    create_dir(param_outdir)    
+    dir_subjects = 'subjects'
+    dir_subjects_full = param_outdir + os.sep + dir_subjects
+
+    dir_snapshots = 'snapshots'
+    dir_snapshots_full = dir_subjects_full + os.sep + dir_snapshots
+
+    create_dir(dir_subjects_full)
+    create_dir(dir_snapshots_full)
+
+    dir_scripts = dir_subjects_full + os.sep + 'scripts'
+    create_dir(dir_scripts)
     
     ### Create snapshots
-    create_snapshots()
+    mriqc_img_info_all = create_snapshots(params, df_files, dir_snapshots_full, labelID)
     
     ### Create report
-    create_html_report()
+    create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, mriqc_img_info_all, outReportName)
     
     
     
