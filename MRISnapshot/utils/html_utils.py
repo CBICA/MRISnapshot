@@ -20,7 +20,7 @@ def htmlSnapshot(img_name, fig_caption, onclick_html_name, imgw):
 <img src="''' + img_name + '''" style="width:''' + str(imgw) + '''">
 <figcaption>''' + fig_caption + '''</figcaption></a>
 <center><button id="backBut">BACK</button></center>
-<script src="../scripts/loadback.js" type="text/javascript" ></script>
+<script src="../scripts/load_back.js" type="text/javascript" ></script>
 '''
 
     return TEXT_HTML_STR
@@ -30,8 +30,8 @@ def htmlSnapshot(img_name, fig_caption, onclick_html_name, imgw):
 ### prepare html code for subject, page header
 def htmlSubjectPrefix(sub_id, sub_no, sub_count, fname_under, fname_over, fname_over2):
     
-    TEXT_HTML_STR = '''<html><head><script src="scripts/saveqcform.js" type="text/javascript" ></script>
-<script src="scripts/miscfunc.js" type="text/javascript" ></script>
+    TEXT_HTML_STR = '''<html><head><script src="scripts/save_qcform.js" type="text/javascript" ></script>
+<script src="scripts/misc_func.js" type="text/javascript" ></script>
 <script src="scripts/shortcut.js" type="text/javascript" ></script>
 <link rel="stylesheet" href="scripts/pagestyle.css">
 </head><body>
