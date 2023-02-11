@@ -3,6 +3,7 @@
 
 from setuptools import setup
 import setuptools
+from glob import glob
 
 #this_directory = Path(__file__).parent
 #long_description = (this_directory / 'README.md').read_text()
@@ -28,6 +29,8 @@ setup(name='mri_snapshot',
     ],
     scripts=[
         'create_report', 'prep_dataset'
+    ],
+    data_files=[('', glob('MRISnapshot/templates/*.js'))
     ],
     classifiers=[
         'Intended Audience :: Science/Research',

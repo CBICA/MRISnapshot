@@ -56,21 +56,23 @@ def check_params(params, list_col_names):
     logger.info(params.sel_vals_olay)
     logger.info('EE')
 
-    ### Convert overlay selected values to list
-    if (params.sel_vals_olay == '') | (params.sel_vals_olay == nan):
+    ### Convert values for view to a list
+    if (params.view_plane == ''):
+        params.view_plane = []
+    else:
+        params.view_plane = [n for n in params.view_plane.split('+')]
+
+    ### Convert selected values for overlay to a list
+    if (params.sel_vals_olay == ''):
         params.sel_vals_olay = []
     else:
-
-        logger.info(params.sel_vals_olay)
-        logger.info('EEFFFFF')
+        params.sel_vals_olay = [int(n) for n in params.sel_vals_olay.split('+')]
         
-        params.sel_vals_olay = [int(n) for n in params.sel_vals_olay.str.split('+')]
-        
-    ### Convert overlay2 selected values to list
+    ### Convert selected values for overlay2 to a list
     if params.sel_vals_olay2 == '':
         params.sel_vals_olay = []
     else:
-        params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.str.split('+')]
+        params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.split('+')]
 
     ### Update few params
     if params.is_edge == 1:
@@ -94,13 +96,12 @@ def create_log_files(outdir):
     #errFile = outdir + os.sep + 'log_' + EXEC_NAME + '_' + startTimePretty + '.stderr'
     writeLog(logFile, '''------------------------''')
 
-def copy_js(outdir):
-    ### Copy js scripts
-    print('TODO')
-    #shutil.copy(EXEC_DIR + os.sep + 'utils' + os.sep + 'saveqcform.js', dir_scripts)
-    #shutil.copy(EXEC_DIR + os.sep + 'utils' + os.sep + 'miscfunc.js', dir_scripts)
-    #shutil.copy(EXEC_DIR + os.sep + 'utils' + os.sep + 'shortcut.js', dir_scripts)
-    #shutil.copy(EXEC_DIR + os.sep + 'utils' + os.sep + 'loadback.js', dir_scripts)
+def copy_js(path_utils, out_dir):
+    # Copy js scripts
+    shutil.copy(os.path.join(path_utils, 'save_qcform.js'), out_dir)
+    shutil.copy(os.path.join(path_utils, 'misc_func.js'), out_dir)
+    shutil.copy(os.path.join(path_utils, 'shortcut.js'), out_dir)
+    shutil.copy(os.path.join(path_utils, 'load_back.js'), out_dir)
 
 def get_nifti(fname, orient = 'LPS'):
     ''' Read nifti image and reorient 
@@ -123,19 +124,18 @@ def get_img_mat(nii, orient = 'LPS'):
         nii = nii.as_reoriented(transform)
     return nii.get_fdata()
 
-def create_snapshots(params, df_images, dir_snapshots_full, labelID):
+def create_snapshots(params, df_images, dir_snapshots_full):
     
     # Dictionary with img orientation for different views
     d_orient = {'A':'LPS', 'S':'SLP', 'C':'PSL'}  
     
     params.num_olay = 0 ## FIXME
     
-    
     ### Extract and save snapshots with metadata
     if not os.path.isfile(dir_snapshots_full + os.sep + 'mriqc_img_info_all.pickle'):
 
         mriqc_img_info_all = [];
-        for sub_index, sub_id in enumerate(df_images[labelID]):
+        for sub_index, sub_id in enumerate(df_images[params.id_col]):
 
             ### Read input images
             fname_under = df_images.loc[sub_index][params.ulay_col]
@@ -156,7 +156,7 @@ def create_snapshots(params, df_images, dir_snapshots_full, labelID):
             sel_slices_all = []
 
             ### Create snapshots for each orientation
-            for view_index, view in enumerate(params.View):
+            for view_index, view in enumerate(params.view_plane):
 
                 ### Get data in selected orientation
                 img3d_ulay = get_img_mat(nii_ulay, d_orient[view]) 
@@ -193,7 +193,13 @@ def create_snapshots(params, df_images, dir_snapshots_full, labelID):
                 sel_slices_all.append(sel_slices)
                     
             ### Keep image information for later creation of html files
-            mriqc_img_info = {'sub_index' : sub_index, 'sub_id' : sub_id, 'fname_under' : fname_under, 'fname_over' : fname_over, 'fname_over2' : fname_over2, 'views' : params.View, 'sel_slices_all' : sel_slices_all, 'outimg_noolay_suffix_all' : outimg_noolay_suffix_all, 'outimg_witholay_suffix_all' : outimg_witholay_suffix_all, 'outimg_caption_all' : outimg_caption_all}
+            mriqc_img_info = {'sub_index' : sub_index, 'sub_id' : sub_id, 
+                              'fname_under' : fname_under, 'fname_over' : fname_over, 
+                              'fname_over2' : fname_over2, 'views' : params.view_plane, 
+                              'sel_slices_all' : sel_slices_all, 
+                              'outimg_noolay_suffix_all' : outimg_noolay_suffix_all, 
+                              'outimg_witholay_suffix_all' : outimg_witholay_suffix_all, 
+                              'outimg_caption_all' : outimg_caption_all}
                 
             mriqc_img_info_all.append(mriqc_img_info)
 
@@ -216,7 +222,7 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
     ###        - all subjects together
 
     # Write the stylesheet
-    TEXT_HTML_STR_STYLESHEET = html.html_stylesheet(params.ImgWidth);
+    TEXT_HTML_STR_STYLESHEET = html.html_stylesheet(params.img_width);
     ofp = open(dir_subjects_full + os.sep + 'scripts' + os.sep + 'pagestyle.css','w')
     ofp.write(TEXT_HTML_STR_STYLESHEET)
     ofp.close
@@ -276,11 +282,11 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
         # Prepare html page for the subject (with all snapshots)
         html_sub = sub_id + '_mriqc.html'
         TEXT_HTML_STR_MULTI_IMG = TEXT_HTML_STR_MULTI_IMG + '\n' + '<p style="clear: both;"><br>'
-        if params.IsOutNoQC == 0:
+        if params.is_out_noqc == 0:
             # Add qc form to html page for the subject
             TEXT_HTML_STR_MULTI_IMG = TEXT_HTML_STR_MULTI_IMG + '\n' + html.htmlQCForm('EXC-Img', 'EXC-Proc', 'Notes',)
 
-        if params.IsOutSingle == 1:
+        if params.is_out_single == 1:
             # Prepare html page for all subjects together
             TEXT_HTML_STR_MULTI_SUBJ = TEXT_HTML_STR_MULTI_SUBJ + '\n' + TEXT_HTML_STR_MULTI_IMG
         else:
@@ -288,7 +294,8 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
             html_next_sub = next_sub_id + '_mriqc.html'
             html_prev_sub = prev_sub_id + '_mriqc.html'
 
-            TEXT_HTML_STR_MULTI_IMG = html.html_Navig(html_prev_sub, html_next_sub) + TEXT_HTML_STR_MULTI_IMG + '\n' + html.html_Navig(html_prev_sub, html_next_sub)
+            TEXT_HTML_STR_MULTI_IMG = html.html_Navig(html_prev_sub, html_next_sub) + TEXT_HTML_STR_MULTI_IMG + '\n' + 
+html.html_Navig(html_prev_sub, html_next_sub)
 
         # Write html page for the subject
         ofp = open(dir_subjects_full + os.sep + html_sub,'w')
@@ -297,7 +304,7 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
         
 
     ### Write the output report
-    if params.IsOutSingle == 1:
+    if params.is_out_single == 1:
         # Write html page for all subjects together (final mriqc report)
         html_sub = dir_subjects_full + os.sep + 'ALLSUBJ_mriqc.html'
 
@@ -320,6 +327,10 @@ def create_html_report(params, dir_subjects_full, dir_snapshots, dir_snapshots_f
 
 def create_report(list_file, config_file, out_dir):
 
+    ## Get the path for utils
+    path_root = os.path.abspath(os.path.dirname(__file__))
+    path_templates = os.path.join(path_root, 'templates')
+
     ## Read input file list
     try:
         df_images = pd.read_csv(list_file)
@@ -329,7 +340,7 @@ def create_report(list_file, config_file, out_dir):
 
     ## Read params from config file
     try:
-        df_conf = pd.read_csv(config_file)
+        df_conf = pd.read_csv(config_file).fillna('')
     except:
         sys.exit("Could not read config file: " +  config_file);
     params = df_conf.set_index('ParamName').ParamValue
@@ -351,12 +362,15 @@ def create_report(list_file, config_file, out_dir):
     dir_subjects_full = os.path.join(out_dir, dir_subjects)
     dir_snapshots = 'snapshots'
     dir_snapshots_full = os.path.join(out_dir, dir_snapshots)
-    dir_scripts = os.path.join(dir_subjects_full, + 'scripts')
+    dir_scripts = os.path.join(dir_subjects_full, 'scripts')
 
     create_dir(out_dir)
     create_dir(dir_subjects_full)
     create_dir(dir_snapshots_full)
     create_dir(dir_scripts)
+    
+    ## Copy js files
+    copy_js(path_templates, dir_scripts)
     
     ### Create snapshots
     mriqc_img_info_all = create_snapshots(params, df_images, dir_snapshots_full)
