@@ -56,10 +56,9 @@ def prep_dataset(params):
                     'mask_col' : 'MaskImg', 'olay_col' : 'OverlayImg', 
                     'olay_col2' : 'OverlayImg2', 'sel_vals_olay' : '', 
                     'sel_vals_olay2' : '', 'num_slice' : 5, 'view_plane' : 'A+S+C', 
-                    'is_edge' : '', 'bin_olay' : 0, 'min_vox' : 0, 
-                    'is_edge' : 0, 'transp' : 1, 'perc_high' : 100, 
-                    'perc_low' : 0, 'is_out_single' : 0, 'is_out_noqc' : 0, 
-                    'img_width' : 100
+                    'bin_olay' : 0, 'min_vox' : 0, 'is_edge' : 1, 'is_transparent' : 1, 
+                    'perc_high' : 100, 'perc_low' : 0, 'is_out_single' : 0, 
+                    'is_out_noqc' : 0, 'img_width' : 300
                    }
     df_config = pd.DataFrame.from_dict(dict_default, orient='index', columns=['ParamValue']).reset_index()
     df_config.columns = ['ParamName', 'ParamValue']
