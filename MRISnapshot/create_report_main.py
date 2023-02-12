@@ -13,6 +13,7 @@ import MRISnapshot.utils.img_overlays as imolay
 import MRISnapshot.utils.html_utils as html
 
 import nibabel as nib
+import nibabel.processing as nibp
 from nibabel.orientations import axcodes2ornt, ornt_transform, inv_ornt_aff
 
 
@@ -116,6 +117,17 @@ def get_nifti(df_images, sub_index, col_name, orient = 'LPS'):
             nii = nii.as_reoriented(transform)
     return nii, fname
 
+def get_nifti_to_standard(df_images, sub_index, col_name, orient = 'LPS'):
+    ''' Read nifti image in image list and reorient 
+    '''
+    fname = ''
+    nii = None
+    if col_name in df_images:
+        fname = df_images.loc[sub_index][col_name]    
+        nii = nib.load(fname)
+        nii = nibp.conform(nii, order = 1, orientation='RAS')
+    return nii, fname
+
 def get_img_mat(nii, orient = 'LPS'):
     ''' Reorient nifti and get data matrix
     '''
@@ -215,29 +227,24 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     params.num_olay = 1
     
     # Create final images and save
+    snapshot_name = sub_id + '_' + curr_view + '_' + str(slice_index)
+    
     if params.num_olay == 0:
         pil_under = imolay.singleImage(img2d_ulay)
-        outimg_noolay_suffix = sub_id + '_orient_' + curr_view + '_slice_' + str(slice_index)
-        pil_under.convert('RGB').save(dir_snapshots_full + os.sep + outimg_noolay_suffix + '.png')
-        outimg_witholay_suffix=''
-
+        pil_under.convert('RGB').save(os.path.join(dir_snapshots_full, snapshot_name + '.png'))
+                                      
     if params.num_olay == 1:
-        
         img2d_olay = img_olay[:,:,curr_slice].astype(float)
-        pil_under , pil_fused = imolay.overlayImage(img2d_ulay, img2d_olay, 
-                                                    params.is_transparent, params.is_edge)
-
-        outimg_noolay_suffix = sub_id + '_orient_' + curr_view + '_slice_' + str(slice_index)
-        pil_under.convert('RGB').save(dir_snapshots_full + os.sep + outimg_noolay_suffix + '.png')
-
-        outimg_witholay_suffix = sub_id + '_orient_' + curr_view + '_slice_' + str(slice_index) + '_witholay'
-        pil_fused.convert('RGB').save(dir_snapshots_full + os.sep + outimg_witholay_suffix + '.png')
+        pil_under, pil_fused = imolay.overlayImage(img2d_ulay, img2d_olay,
+                                                   params.is_transparent, params.is_edge)
+        pil_under.convert('RGB').save(dir_snapshots_full + os.sep + snapshot_name + '.png')
+        pil_fused.convert('RGB').save(dir_snapshots_full + os.sep + snapshot_name + '_olay.png')
 
 
     # Keep image information for later creation of html files
-    outimg_caption = 'Slice: ' + curr_view + '_' + str(list_sel_slices[slice_index] + 1)
+    snapshot_caption = 'Slice: ' + curr_view + '_' + str(list_sel_slices[slice_index] + 1)
     
-    return [outimg_caption, outimg_noolay_suffix, outimg_witholay_suffix]
+    return [snapshot_caption, snapshot_name]
 
 def create_snapshots(params, df_images, dir_snapshots_full):
     '''Create snapshots and meta data about them
@@ -253,15 +260,19 @@ def create_snapshots(params, df_images, dir_snapshots_full):
         for sub_index, sub_id in enumerate(df_images[params.id_col]):
 
             ### Read input images
-            nii_ulay, fname_ulay  = get_nifti(df_images, sub_index, params.ulay_col)
-            nii_mask, fname_mask  = get_nifti(df_images, sub_index, params.mask_col)
-            nii_olay, fname_olay  = get_nifti(df_images, sub_index, params.olay_col)
-            nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
+            #nii_ulay, fname_ulay  = get_nifti(df_images, sub_index, params.ulay_col)
+            #nii_mask, fname_mask  = get_nifti(df_images, sub_index, params.mask_col)
+            #nii_olay, fname_olay  = get_nifti(df_images, sub_index, params.olay_col)
+            #nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
+
+            nii_ulay, fname_ulay  = get_nifti_to_standard(df_images, sub_index, params.ulay_col)
+            nii_mask, fname_mask  = get_nifti_to_standard(df_images, sub_index, params.mask_col)
+            nii_olay, fname_olay  = get_nifti_to_standard(df_images, sub_index, params.olay_col)
+            nii_olay2, fname_olay2  = get_nifti_to_standard(df_images, sub_index, params.olay_col2)
 
             # Initialize containers to keep image info
-            outimg_noolay_suffix_all = []
-            outimg_witholay_suffix_all = []
-            outimg_caption_all = []
+            snapshot_name_all = []
+            snapshot_caption_all = []
             list_sel_slices_all = []
 
             ## Scale ulay image intensities
@@ -284,20 +295,18 @@ def create_snapshots(params, df_images, dir_snapshots_full):
                     info_snapshot = extract_snapshot(img3d_ulay, img3d_olay, img3d_olay2, params, 
                                                      curr_view, curr_slice, slice_index, sub_id, 
                                                      dir_snapshots_full, list_sel_slices)
-                    outimg_caption_all.append(info_snapshot[0])
-                    outimg_noolay_suffix_all.append(info_snapshot[1])
-                    outimg_witholay_suffix_all.append(info_snapshot[2])
+                    snapshot_caption_all.append(info_snapshot[0])
+                    snapshot_name_all.append(info_snapshot[1])
 
                 list_sel_slices_all.append(list_sel_slices)
                     
             ### Keep image information for later creation of html files
             snapshot_info = {'sub_index' : sub_index, 'sub_id' : sub_id, 
                               'fname_ulay' : fname_ulay, 'fname_olay' : fname_olay, 
-                              'fname_olay2' : fname_olay2, 'views' : params.view_plane, 
+                              'fname_olay2' : fname_olay2, 'view_plane' : params.view_plane, 
                               'list_sel_slices_all' : list_sel_slices_all, 
-                              'outimg_noolay_suffix_all' : outimg_noolay_suffix_all, 
-                              'outimg_witholay_suffix_all' : outimg_witholay_suffix_all, 
-                              'outimg_caption_all' : outimg_caption_all}
+                              'snapshot_name_all' : snapshot_name_all, 
+                              'snapshot_caption_all' : snapshot_caption_all}
                 
             img_info_all.append(snapshot_info)
 
@@ -341,25 +350,23 @@ img_info_all, out_report):
         fname_ulay = item['fname_ulay']
         fname_olay = item['fname_olay']
         fname_olay2 = item['fname_olay2']
-        outimg_noolay_suffix_all = item['outimg_noolay_suffix_all']
-        outimg_witholay_suffix_all = item['outimg_witholay_suffix_all']
-        outimg_caption_all = item['outimg_caption_all']
+        snapshot_name_all = item['snapshot_name_all']
+        snapshot_caption_all = item['snapshot_caption_all']
 
         # Header for file with multiple snapshots
         HTML_multi_snapshot = html.htmlSubjectPrefix(sub_id, i+1, numItem, fname_ulay, 
                                                      fname_olay, fname_olay2)
             
-        for j, outimg_noolay_suffix in enumerate(outimg_noolay_suffix_all):
-            outimg_witholay_suffix = outimg_witholay_suffix_all[j]
-            outimg_caption = outimg_caption_all[j]
+        for j, snapshot_name in enumerate(snapshot_name_all):
+            snapshot_caption = snapshot_caption_all[j]
             
             # Write html page for each snapshot without overlay
-            tmp_img = outimg_noolay_suffix + '.png'
-            tmp_txt = 'Fig: ' + str(j) + outimg_caption
-            tmp_html = outimg_witholay_suffix + '.html'            
+            tmp_img = snapshot_name + '.png'
+            tmp_txt = 'Fig: ' + str(j) + snapshot_caption
+            tmp_html = snapshot_name + '_olay.html'            
             HTML_single_snapshot = html.htmlSnapshot(tmp_img, tmp_txt, tmp_html, params.img_width_single) 
 
-            ofp = open(os.path.join(dir_snapshots_full, outimg_noolay_suffix + '.html'), 'w')
+            ofp = open(os.path.join(dir_snapshots_full, snapshot_name + '.html'), 'w')
             ofp.write(HTML_single_snapshot)
             ofp.close
 
@@ -367,27 +374,27 @@ img_info_all, out_report):
             if params.num_olay == 0:
                 
                 # Append html code for all snapshots from a subject
-                tmp_img = os.path.join(dir_snapshots, outimg_noolay_suffix + '.png')
-                tmp_html = os.path.join(dir_snapshots, outimg_noolay_suffix + '.html')
+                tmp_img = os.path.join(dir_snapshots, snapshot_name + '.png')
+                tmp_html = os.path.join(dir_snapshots, snapshot_name + '.html')
 
-                HTML_tmp = html.htmlSubjectAddImage(tmp_img, outimg_caption, tmp_html)
+                HTML_tmp = html.htmlSubjectAddImage(tmp_img, snapshot_caption, tmp_html)
 
             else:
-                tmp_img = outimg_witholay_suffix + '.png'
-                tmp_txt = 'Fig: ' + str(j) + outimg_caption
-                tmp_html = outimg_noolay_suffix + '.html'
+                tmp_img = snapshot_name + '_olay.png'
+                tmp_txt = 'Fig: ' + str(j) + snapshot_caption
+                tmp_html = snapshot_name + '.html'
                 HTML_single_snapshot = html.htmlSnapshot(tmp_img, tmp_txt, tmp_html, params.img_width_single)
                 
-                tmp_html = os.path.join(dir_snapshots_full, outimg_witholay_suffix + '.html')
+                tmp_html = os.path.join(dir_snapshots_full, snapshot_name + '_olay.html')
                 
                 ofp = open(tmp_html, 'w')
                 ofp.write(HTML_single_snapshot)
                 ofp.close
 
                 # Append html code for all snapshots from a subject
-                tmp_img = os.path.join(dir_snapshots, outimg_witholay_suffix + '.png')
-                tmp_html = os.path.join(dir_snapshots, outimg_witholay_suffix + '.html')
-                HTML_tmp = html.htmlSubjectAddImage(tmp_img, outimg_caption, tmp_html)
+                tmp_img = os.path.join(dir_snapshots, snapshot_name + '_olay.png')
+                tmp_html = os.path.join(dir_snapshots, snapshot_name + '_olay.html')
+                HTML_tmp = html.htmlSubjectAddImage(tmp_img, snapshot_caption, tmp_html)
             
             HTML_multi_snapshot = HTML_multi_snapshot + '\n' + HTML_tmp
 
