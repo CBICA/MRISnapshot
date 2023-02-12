@@ -79,7 +79,6 @@ def check_params(params, list_col_names):
 def create_dir(dir_name):
     '''Create output directories
     '''
-    
     try:        
         if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
@@ -97,7 +96,6 @@ def create_log_files(outdir):
 def copy_js(path_utils, out_dir):
     '''Copy js scripts
     '''
-    
     shutil.copy(os.path.join(path_utils, 'save_qcform.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'misc_func.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'shortcut.js'), out_dir)
@@ -131,11 +129,60 @@ def get_img_mat(nii, orient = 'LPS'):
         img_mat = nii.get_fdata()
     return img_mat
 
-def calc_sel_slices():
+def calc_sel_slices_tmp():
     '''Select slices that will be used to create snapshots
     '''
     slices = [50, 70, 90, 110, 130, 150]      ## FIXME
     return slices
+
+def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, sub_id):
+    '''Select slices that will be used to create snapshots
+    '''
+    ## Detect mask image
+    ##  - If mask img is provided, it's used as a mask
+    ##  - If not
+    ##      - If overlay img is provided, it's used as a mask
+    ##      - If not, underlay img is used as a mask     
+    
+    if img_mask is None:
+        if img_olay is None:
+            img_mask = (img_ulay > 0).astype(int)
+        else:
+            if img_olay2 is not None:
+                img_olay = img_olay + img_olay2
+            img_mask = (img_olay > 0).astype(int)
+
+    ## Detect indices of non-zero slices
+    ind_slice_nz = np.where(np.sum(img_mask, axis = (0, 1)) > params.min_vox)[0]
+    num_slice_nz = ind_slice_nz.size
+
+    if num_slice_nz == 0:
+        msg = "No slice to show: " + params.view_plane + " , " + str(sub_index) + ":" + sub_id
+        logger.warning(msg)
+        
+    # Select using absolute value of params.num_slice as step size
+    if params.num_slice < 0:       
+        if -1*params.NumSlice > num_slice_nz:        # Not enough slices, just show the one in middle
+            sl_sel = ind_slice_nz[num_slice_nz / 2]
+        else:
+            sel_inds = np.arange(params.num_slice / 2.0, num_slice_nz, -1 * params.num_slice)
+            sel_inds = sel_inds[1:].round().astype(int)
+            sl_sel = ind_slice_nz[sel_inds]
+    
+    # Select using params.num_slice as total number of slices
+    else:                        
+        if num_slice_nz <= params.num_slice:
+            sl_sel = ind_slice_nz
+        else:
+            hstep = float(num_slice_nz) / params.num_slice
+            sel_inds = np.arange(-1.0 * hstep / 2.0, num_slice_nz, hstep)
+            sel_inds = sel_inds[1:].round().astype(int)
+            sl_sel = ind_slice_nz[sel_inds]
+
+    if isinstance(sl_sel, np.int64):
+        sl_sel = np.array([sl_sel])
+
+    return sl_sel
 
 def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
     '''Change contrast of the image using percentile values
@@ -230,7 +277,9 @@ def create_snapshots(params, df_images, dir_snapshots_full):
                 img3d_olay2 = get_img_mat(nii_olay2, d_orient[curr_view]) 
             
                 ### Select slices to show
-                list_sel_slices = calc_sel_slices()
+                list_sel_slices = calc_sel_slices(img3d_ulay, img3d_mask, img3d_olay, 
+                                                  img3d_olay2, params, sub_index, sub_id)
+                
                 for slice_index, curr_slice in enumerate(list_sel_slices):
                     info_snapshot = extract_snapshot(img3d_ulay, img3d_olay, img3d_olay2, params, 
                                                      curr_view, curr_slice, slice_index, sub_id, 
@@ -417,6 +466,8 @@ def create_report(list_file, config_file, out_dir):
 
     ## Verify params
     params = check_params(params, list_col_names)
+
+    logger.info(params)
 
     ### Check output file
     out_report = os.path.join(out_dir, 'qcreport.html')
