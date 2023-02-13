@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 ### Import modules
+import os, sys, time, shutil
 import getopt
 import numpy as np
 import scipy as sp
 import pandas as pd
 import pickle
 from PIL import Image, ImageFilter
-import os, sys, time, shutil
-from scipy.ndimage.interpolation import zoom
+#from scipy.ndimage.interpolation import zoom
 import MRISnapshot.utils.img_overlays as imolay
 import MRISnapshot.utils.html_utils as html
 

@@ -28,13 +28,13 @@ Prepares input data for running create_report.
 
 OPTIONS (Required):
 [-i --indir   ] <path>      Input image directory
-[--suff_ulay   ] <text>     Suffix of underlay images
+[--ulay   ] <text>     Suffix of underlay images
 [-d --outdir     ] <path>     Output directory
 
 OPTIONS (Optional):
-[--suff_mask   ] <text>     Suffix of mask images (default: no mask image)
-[--suff_olay   ] <text>     Suffix of overlay images (default: no overlay image)
-[--suff_olay2   ] <text>     Suffix of second overlay images (default: no second overlay image)
+[--mask   ] <text>     Suffix of mask images (default: no mask image)
+[--olay   ] <text>     Suffix of overlay images (default: no overlay image)
+[--olay2  ] <text>     Suffix of second overlay images (default: no second overlay image)
 
 ----- Examples and tests -----
 
@@ -55,11 +55,11 @@ if __name__ == "__main__":
         description="QC Report",
     )
     parser.add_argument("-i", dest="indir", type=str, help="Input image directory", required=True)
-    parser.add_argument("--s_ulay", dest="s_ulay", type=str, help="Suffix of underlay images", required=True)
+    parser.add_argument("--ulay", dest="s_ulay", type=str, help="Suffix of underlay images", required=True)
     parser.add_argument("-d", dest="outdir", type=str, help="Output directory", required=True)
-    parser.add_argument("--s_mask", dest="s_mask", type=str, help="Suffix of mask images", required=False)
-    parser.add_argument("--s_olay", dest="s_olay", type=str, help="Suffix of overlay images", required=False)
-    parser.add_argument("--s_olay2", dest="s_olay2", type=str, help="Suffix of second overlay images", required=False)
+    parser.add_argument("--mask", dest="s_mask", type=str, help="Suffix of mask images", required=False)
+    parser.add_argument("--olay", dest="s_olay", type=str, help="Suffix of overlay images", required=False)
+    parser.add_argument("--olay2", dest="s_olay2", type=str, help="Suffix of second overlay images", required=False)
 
     ## Parse input args
     params = parser.parse_args()
