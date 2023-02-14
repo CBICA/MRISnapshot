@@ -69,7 +69,7 @@ def overlayImageDouble(img2d_under, img2d_over1, img2d_over2, transparency=0.6, 
     # Set alpha=0 for the background (intensity=0) of the fg image
     red, green, blue, alpha = pil_under.split()
 
-    transparency=np.float(transparency)
+    transparency = float(transparency)
     if transparency < 1:
         pil_fused = Image.blend(pil_under, pil_over1, transparency)
         pil_fused = Image.blend(pil_fused, pil_over2, transparency)

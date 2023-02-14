@@ -238,16 +238,16 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
         pil_under, pil_fused = imolay.overlayImage(img2d_ulay, img2d_olay,
                                                    params.is_transparent, params.is_edge)
         pil_under.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '.png'))
-        pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png')
+        pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png'))
 
-    if params.NumOverlay == 2:
+    if params.num_olay == 2:
         img2d_olay = img_olay[:,:,curr_slice].astype(float)
         img2d_olay2 = img_olay2[:,:,curr_slice].astype(float)
 
         pil_under, pil_fused = imolay.overlayImageDouble(img2d_ulay, img2d_olay, img2d_olay2, 
                                                          params.is_transparent, params.is_edge)
         pil_under.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '.png'))
-        pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png')
+        pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png'))
 
     # Keep image information for later creation of html files
     snapshot_caption = 'Slice: ' + curr_view + '_' + str(list_sel_slices[slice_index] + 1)
