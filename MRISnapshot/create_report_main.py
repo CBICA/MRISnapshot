@@ -12,6 +12,7 @@ from PIL import Image, ImageFilter
 import MRISnapshot.utils.img_overlays as imolay
 import MRISnapshot.utils.html_utils as html
 
+
 import nibabel as nib
 import nibabel.processing as nibp
 from nibabel.orientations import axcodes2ornt, ornt_transform, inv_ornt_aff
