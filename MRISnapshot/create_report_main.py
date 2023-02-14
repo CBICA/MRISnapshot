@@ -12,7 +12,6 @@ from PIL import Image, ImageFilter
 import MRISnapshot.utils.img_overlays as imolay
 import MRISnapshot.utils.html_utils as html
 
-
 import nibabel as nib
 import nibabel.processing as nibp
 from nibabel.orientations import axcodes2ornt, ornt_transform, inv_ornt_aff
@@ -225,7 +224,7 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     ## Resize underlay slice
     #img2d_ulay = zoom(img2d_ulay, (scX,scY), order=1)
     
-    params.num_olay = 1
+    ### params.num_olay = 1  ## FIXME - just for tmp tests
     
     # Create final images and save
     snapshot_name = sub_id + '_' + curr_view + '_' + str(slice_index)
@@ -233,14 +232,22 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     if params.num_olay == 0:
         pil_under = imolay.singleImage(img2d_ulay)
         pil_under.convert('RGB').save(os.path.join(dir_snapshots_full, snapshot_name + '.png'))
-                                      
+    
     if params.num_olay == 1:
         img2d_olay = img_olay[:,:,curr_slice].astype(float)
         pil_under, pil_fused = imolay.overlayImage(img2d_ulay, img2d_olay,
                                                    params.is_transparent, params.is_edge)
-        pil_under.convert('RGB').save(dir_snapshots_full + os.sep + snapshot_name + '.png')
-        pil_fused.convert('RGB').save(dir_snapshots_full + os.sep + snapshot_name + '_olay.png')
+        pil_under.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '.png'))
+        pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png')
 
+    if params.NumOverlay == 2:
+        img2d_olay = img_olay[:,:,curr_slice].astype(float)
+        img2d_olay2 = img_olay2[:,:,curr_slice].astype(float)
+
+        pil_under, pil_fused = imolay.overlayImageDouble(img2d_ulay, img2d_olay, img2d_olay2, 
+                                                         params.is_transparent, params.is_edge)
+        pil_under.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '.png'))
+        pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png')
 
     # Keep image information for later creation of html files
     snapshot_caption = 'Slice: ' + curr_view + '_' + str(list_sel_slices[slice_index] + 1)
