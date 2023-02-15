@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="MRISnapshot",
         formatter_class = argparse.RawTextHelpFormatter,
-        description="QC Report",
+        description="Create a QC report of the dataset",
     )
     parser.add_argument("-d", dest="run_dir", type=str, help="Directory to create the QC report", required=True)
 

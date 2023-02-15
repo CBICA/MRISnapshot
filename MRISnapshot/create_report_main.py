@@ -72,8 +72,8 @@ def check_params(params, list_col_names):
 
     ### Update few params
     if params.is_edge == 1:
-        params.is_transparent = 1
-        logger.warning('is_edge selected for overlay, transparency reset to 1')
+        params.alpha_olay = 1
+        logger.warning('is_edge selected for overlay, alpha reset to 1')
 
     return params
 
@@ -236,7 +236,7 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     if params.num_olay == 1:
         img2d_olay = img_olay[:,:,curr_slice].astype(float)
         pil_under, pil_fused = imolay.overlayImage(img2d_ulay, img2d_olay,
-                                                   params.is_transparent, params.is_edge)
+                                                   params.alpha_olay, params.is_edge)
         pil_under.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '.png'))
         pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png'))
 
@@ -245,7 +245,7 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
         img2d_olay2 = img_olay2[:,:,curr_slice].astype(float)
 
         pil_under, pil_fused = imolay.overlayImageDouble(img2d_ulay, img2d_olay, img2d_olay2, 
-                                                         params.is_transparent, params.is_edge)
+                                                         params.alpha_olay, params.is_edge)
         pil_under.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '.png'))
         pil_fused.convert('RGB').save(os.path.join(dir_snapshots_full,snapshot_name + '_olay.png'))
 

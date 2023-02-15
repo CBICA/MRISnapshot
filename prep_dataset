@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import sys
 import pandas as pd
 from MRISnapshot import prep_dataset_main as pdm
 
@@ -61,7 +62,10 @@ if __name__ == "__main__":
     parser.add_argument("--olay", dest="s_olay", type=str, help="Suffix of overlay images", required=False)
     parser.add_argument("--olay2", dest="s_olay2", type=str, help="Suffix of second overlay images", required=False)
 
+    logger.info('Running : ' + ' '.join(sys.argv))
+
     ## Parse input args
+    logger.info('  Parsing args ...')
     params = parser.parse_args()
 
     ## Update args
@@ -69,6 +73,7 @@ if __name__ == "__main__":
     params.out_dir = os.path.abspath(params.outdir)
     
     ## Prepare data
+    logger.info('  Preparing image list and configuration file ...')
     pdm.prep_dataset(params)
     
     
