@@ -165,7 +165,7 @@ def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, 
             img_mask = (img_olay > 0).astype(int)
 
     ## Detect indices of non-zero slices
-    ind_slice_nz = np.where(np.sum(img_mask, axis = (0, 1)) > params.min_vox)[0]
+    ind_slice_nz = np.where(np.sum(img_mask, axis = (0, 1)) >= params.min_vox)[0]
     num_slice_nz = ind_slice_nz.size
 
     if num_slice_nz == 0:
@@ -209,7 +209,8 @@ def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
     img = img - scale_low
     nii_out = nib.Nifti1Image(img, nii_img.affine, nii_img.header)
     
-    logger.info('Img scaled to : ' + str(scale_low) + '  ' + str(scale_high))
+    logger.info('    Underlay image contrast adjusted to ([min, max]): [' + str(scale_low) + ', ' + str(scale_high) + 
+']')
     return nii_out
 
 def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slice, slice_index, 
@@ -254,12 +255,32 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     
     return [snapshot_caption, snapshot_name]
 
+def crop_nifti(nii_mask, nii_arr):
+    tmp_img = nii_mask.get_fdata()
+    x = np.any(tmp_img, axis=(1, 2))
+    y = np.any(tmp_img, axis=(0, 2))
+    z = np.any(tmp_img, axis=(0, 1))
+
+    xmin, xmax = np.where(x)[0][[0, -1]] + [-2, 2]
+    ymin, ymax = np.where(y)[0][[0, -1]] + [-2, 2]
+    zmin, zmax = np.where(z)[0][[0, -1]] + [-2, 2]
+
+    out_arr = []
+    for i, tmp_nii in enumerate(nii_arr):
+        cropped_nii = tmp_nii.slicer[xmin:xmax, ymin:ymax, zmin:zmax]
+        out_arr.append(cropped_nii)
+
+    return out_arr
+
+
 def create_snapshots(params, df_images, dir_snapshots_full):
     '''Create snapshots and meta data about them
     '''
     
     # Dictionary with img orientation for different views
     d_orient = {'A':'PLS', 'S':'IPR', 'C':'IRP'}  
+    
+    num_images = df_images.shape[0]
     
     ### Extract and save snapshots with metadata
     if not os.path.isfile(dir_snapshots_full + os.sep + 'img_info_all.pickle'):
@@ -273,10 +294,16 @@ def create_snapshots(params, df_images, dir_snapshots_full):
             #nii_olay, fname_olay  = get_nifti(df_images, sub_index, params.olay_col)
             #nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
 
+            logger.info('    Reading images for subject ' + str(sub_index + 1) + ' / ' + str(num_images))
             nii_ulay, fname_ulay  = get_nifti_to_standard(df_images, sub_index, params.ulay_col)
             nii_mask, fname_mask  = get_nifti_to_standard(df_images, sub_index, params.mask_col)
             nii_olay, fname_olay  = get_nifti_to_standard(df_images, sub_index, params.olay_col)
             nii_olay2, fname_olay2  = get_nifti_to_standard(df_images, sub_index, params.olay_col2)
+
+            ## Crop input images
+            if params.crop_to_mask == 1:
+                [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_mask, 
+                                                                       [nii_ulay, nii_mask, nii_olay, nii_olay2])
 
             # Initialize containers to keep image info
             snapshot_name_all = []
@@ -461,18 +488,28 @@ def create_report(list_file, config_file, out_dir):
     path_root = os.path.abspath(os.path.dirname(__file__))
     path_templates = os.path.join(path_root, 'templates')
 
+    ### Check output file
+    out_report = os.path.join(out_dir, 'qcreport.html')
+    if os.path.exists(out_report):
+        logger.warning('Output report exists. Aborting. To overwrite, delete the output report and rerun: '  \
+            + out_report)
+        sys.exit();
+
     ## Read input file list
+    logger.info('  Reading image list from: ' + list_file)
     try:
         df_images = pd.read_csv(list_file)
         list_col_names = df_images.columns.values
     except:
-        sys.exit("Could not read list file: " + list_file);
+        sys.exit("ERROR: Could not read image list file: " + list_file)
+
 
     ## Read params from config file
+    logger.info('  Reading configuration from: ' + config_file)
     try:
         df_conf = pd.read_csv(config_file).fillna('')
     except:
-        sys.exit("Could not read config file: " +  config_file);
+        sys.exit("ERROR: Could not read config file: " +  config_file);
     params = df_conf.set_index('ParamName').ParamValue
 
     ## Convert numeric params
@@ -482,12 +519,8 @@ def create_report(list_file, config_file, out_dir):
     ## Verify params
     params = check_params(params, list_col_names)
 
+    logger.info('  QC report parameters: ' )
     logger.info(params)
-
-    ### Check output file
-    out_report = os.path.join(out_dir, 'qcreport.html')
-    if os.path.exists(out_report):
-        sys.exit("Output report exists: " + out_report);
 
     ### Create out dirs
     dir_subjects = 'subjects'
@@ -505,9 +538,11 @@ def create_report(list_file, config_file, out_dir):
     copy_js(path_templates, dir_scripts)
     
     ### Create snapshots
+    logger.info('  Creating snapshots ...' )
     img_info_all = create_snapshots(params, df_images, dir_snapshots_full)
     
     ### Create report
+    logger.info('  Creating html report ...' )
     create_html_report(params, out_dir, dir_subjects_full, dir_snapshots, 
                        dir_snapshots_full, dir_subjects, img_info_all, out_report)
     

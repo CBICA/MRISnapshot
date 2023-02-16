@@ -62,7 +62,9 @@ if __name__ == "__main__":
     parser.add_argument("--olay", dest="s_olay", type=str, help="Suffix of overlay images", required=False)
     parser.add_argument("--olay2", dest="s_olay2", type=str, help="Suffix of second overlay images", required=False)
 
+    logger.info('-----------------------------------------')    
     logger.info('Running : ' + ' '.join(sys.argv))
+    logger.info('-----------------------------------------')    
 
     ## Parse input args
     logger.info('  Parsing args ...')

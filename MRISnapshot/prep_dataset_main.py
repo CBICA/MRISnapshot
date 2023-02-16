@@ -31,7 +31,7 @@ def prep_dataset(params):
     ## Create a list with underlay and overlay images
     out_list = os.path.join(params.out_dir, 'list_images.csv')
     if os.path.exists(out_list):
-        logger.warning('  Output list exists, skip list creation: ' + out_list)
+        logger.warning('  Output image list exists. To overwrite it, delete the image list and rerun: ' + out_list)
     else:
         list_ulay = glob.glob(params.in_dir + os.sep + '**' + os.sep + '*' + params.s_ulay, recursive = True)
         df = pd.DataFrame(data = list_ulay, columns = ['UnderlayImg'])
@@ -55,7 +55,7 @@ def prep_dataset(params):
     ## Create a default configuration file
     out_config = os.path.join(params.out_dir, 'config.csv')
     if os.path.exists(out_config):
-        logger.warning('  Output config file exists, skip config file creation: ' + out_config)
+        logger.warning('  Output config file exists. To overwrite it, delete the config file and rerun: ' + out_config)
     else:
         dict_default = {'id_col' : 'ScanID', 
                         'ulay_col' : 'UnderlayImg', 'mask_col' : 'MaskImg', 
@@ -63,7 +63,9 @@ def prep_dataset(params):
                         'sel_vals_olay' : '', 'sel_vals_olay2' : '',
                         'view_plane' : 'A+S+C',
                         'num_slice' : 5, 'step_size_slice' : '',
-                        'min_vox' : '',
+                        'min_vox' : 1,
+                        'crop_to_mask' : 1,
+                        'crop_to_olay' : 1,
                         'bin_olay' : 0,  
                         'is_edge' : 1, 
                         'alpha_olay' : 1, 
