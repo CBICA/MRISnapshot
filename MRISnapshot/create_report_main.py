@@ -66,7 +66,7 @@ def check_params(params, list_col_names):
         
     ### Convert selected values for overlay2 to a list
     if params.sel_vals_olay2 == '':
-        params.sel_vals_olay = []
+        params.sel_vals_olay2 = []
     else:
         params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.split('+')]
 
@@ -256,61 +256,79 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     return [snapshot_caption, snapshot_name]
 
 def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
+    ''' Crops a set of nifti images to the bounding box of the mask
+    '''
     
-    ## Cropped image will not be smaller than this size
+    ## Min size in each dimension for the cropped image
     crop_min_size = 30
     
     ## Get mask image
     tmp_img = nii_mask.get_fdata()
     
-    ## Find crop coordinates in different orientations
-    coor_crop = np.zeros([3, 2])
+    ## Calculate cropping boundaries in 3 orientations
+    b_crop = np.zeros([3, 2]).astype(int)
     for i, tmp_axis in enumerate([(1, 2), (0, 2), (0, 1)]):
     
         ind_nz = np.where(np.any(tmp_img, axis = tmp_axis))[0]
+        img_dim = ind_nz.shape[0]
         
-        ## Empty mask, all values are zero; no cropping
+        ## If empty mask with all values are zero; no cropping
         if ind_nz.shape[0] == 0:
             return nii_arr
         
         ## Get non-zero boundaries
-        if nzx.shape[0] == 1:           ## Mask has a single non-zero slice; special case
-            xmin = np.where(x)[0][0]
-            xmax = np.where(x)[0][0]
+        b_min = ind_nz[0]                  ## Left boundary is the first non-zero index
+        if ind_nz.shape[0] > 1:           
+            b_max = ind_nz[-1]           ## Right boundary is the last non-zero index
         else:
-            xmin, xmax = np.where(x)[0][[0, -1]]
-
-        if nzy.shape[0] == 1:           ## Mask has a single non-zero slice; special case
-            ymin = np.where(y)[0][0]
-            ymax = np.where(y)[0][0]
-        else:
-            ymin, ymax = np.where(y)[0][[0, -1]]
-        
-        if nzz.shape[0] == 1:           ## Mask has a single non-zero slice; special case
-            zmin = np.where(z)[0][0]
-            zmax = np.where(z)[0][0]
-        else:
-            ymin, ymax = np.where(y)[0][[0, -1]]
+            b_max = b_min                 ## Mask has a single non-zero slice; special case
 
         ## Add padding
-        xsize = xmax - xmin
-        xpad = np.ceil(xsize * padding_ratio)
-        new_xsize = xsize + xpad * 2
-        xmin = xmin - 
+        b_size = b_max - b_min
+        b_pad = np.ceil(b_size * padding_ratio)
+        b_size_padded = b_size + b_pad * 2 
+        if b_size_padded < crop_min_size:           ## If padded size is smaller than min required size
+            b_pad = np.ceil((crop_min_size - b_size) / 2)
+        b_min = np.max([0, b_min - b_pad])            ## Set padded boundary, correcting if it's smaller than 0
+        b_max = np.max([img_dim, b_max + b_pad])      ## Set padded boundary, correcting if it's larger than img size
         
-        ysize = ymax - ymin
-        ysize = zmax - zmin
-        
-        xmin = xmin - crop_margin_percent * xmin 
+        ## Save calculated cboundaries
+        b_crop[i, 0] = int(b_min)
+        b_crop[i, 1] = int(b_max)
+            
+    #logger.info(b_crop)
+    #input()
     
-
+    ## Crop all images
     out_arr = []
     for i, tmp_nii in enumerate(nii_arr):
-        cropped_nii = tmp_nii.slicer[xmin:xmax, ymin:ymax, zmin:zmax]
-        out_arr.append(cropped_nii)
+        if tmp_nii is None:
+            out_arr.append(tmp_nii)
+        else:
+            cropped_nii = tmp_nii.slicer[b_crop[0,0]:b_crop[0,1], b_crop[1,0]:b_crop[1,1], 
+                                         b_crop[2,0]:b_crop[2,1]]
+            out_arr.append(cropped_nii)
+
+    logger.info('    Images cropped to (x, y, z): ' + str(b_crop[0]) + ', ' + str(b_crop[1]) + ', ' + str(b_crop[2]))
 
     return out_arr
 
+def sel_vals_nifti(in_nii, sel_vals):
+    '''Select a set of values from the input image
+    '''
+    
+    ## Read img data
+    in_img = in_nii.get_fdata()
+    
+    ## Set values not included in the selected list to zero
+    in_img[np.isin(in_img, sel_vals) == False] = 0
+    
+    ## Create updated nifti
+    #out_nii = nib.Nifti1Image(in_img.astype(np.float), nii_original_scan.affine)
+    out_nii = nib.Nifti1Image(in_img, in_nii.affine, in_nii.header)
+
+    ## Return out nifti    
+    return out_nii
 
 def create_snapshots(params, df_images, dir_snapshots_full):
     '''Create snapshots and meta data about them
@@ -339,9 +357,18 @@ def create_snapshots(params, df_images, dir_snapshots_full):
             nii_olay, fname_olay  = get_nifti_to_standard(df_images, sub_index, params.olay_col)
             nii_olay2, fname_olay2  = get_nifti_to_standard(df_images, sub_index, params.olay_col2)
 
+            ## Select values in the overlay images
+            if len(params.sel_vals_olay) > 0:
+                nii_olay = sel_vals_nifti(nii_olay2, params.sel_vals_olay)
+            if len(params.sel_vals_olay2) > 0:
+                nii_olay2 = sel_vals_nifti(nii_olay2, params.sel_vals_olay2)
+
             ## Crop input images
             if params.crop_to_mask == 1:
                 [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_mask, 
+                                                                       [nii_ulay, nii_mask, nii_olay, nii_olay2])
+            if params.crop_to_olay == 1:
+                [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_olay, 
                                                                        [nii_ulay, nii_mask, nii_olay, nii_olay2])
 
             # Initialize containers to keep image info
