@@ -72,7 +72,16 @@ def prep_dataset(params):
                         'perc_high' : 100, 'perc_low' : 0, 
                         'is_out_single' : 0, 'is_out_noqc' : 0, 
                         'img_width' : 300
-                    }        
+                    }
+        
+        ## Reset default values for missing image types
+        if params.s_mask == None:
+            dict_default['mask_col'] = ''
+        if params.s_olay == None:
+            dict_default['olay_col'] = ''
+        if params.s_olay2 == None:
+            dict_default['olay_col2'] = ''
+        
         df_config = pd.DataFrame.from_dict(dict_default, orient='index', columns=['ParamValue']).reset_index()
         df_config.columns = ['ParamName', 'ParamValue']
 

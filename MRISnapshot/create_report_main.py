@@ -29,51 +29,90 @@ logger.setLevel(logging.INFO)    ## FIXME Debug comments will be removed in rele
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 
 
-def check_params(params, list_col_names):
-    '''Verify input arguments
+def parse_config(df_conf, list_col_names):
+    '''Read config list and check params
     '''
+        
+    #### Check integrity of the config dataframe
     
-    ### Check underlay column in file list
+    ## Check column names of the config file
+    if 'ParamName' not in df_conf:
+        sys.exit("\nERROR: Missing column in config file: ParamName" + '\n')
+    if 'ParamValue' not in df_conf:
+        sys.exit("\nERROR: Missing column in config file: ParamValue" + '\n')
+    
+    ## Set index
+    df_conf = df_conf.set_index('ParamName')
+
+    ## Check required config values
+    cols_required = ['id_col', 'ulay_col']
+    for tmp_col in cols_required:
+        if tmp_col not in df_conf.index:
+            sys.exit("\nERROR: Missing required value in config file ParamName column: " + tmp_col + '\n')
+    
+    ## Create dataframe with default values
+    cols_default = ['id_col', 'ulay_col', 'mask_col', 'olay_col', 'olay_col2', 'sel_vals_olay', 
+                    'sel_vals_olay2', 'view_plane', 'num_slice', 'step_size_slice',
+                    'min_vox', 'crop_to_mask', 'crop_to_olay', 'bin_olay', 
+                    'is_edge', 'alpha_olay', 'perc_high', 'perc_low', 
+                    'is_out_single', 'is_out_noqc', 'img_width']
+    vals_default = ['', '', '', '', '', '', 
+                    '', 'A', '4', '',
+                    '1', '0', '0', '1', 
+                    '1', '1', '99', '1', 
+                    '1', '0', '300']
+    if 'step_size_slice' in df_conf.index:              ## If step_size_slice is set default num_slices will be empty
+        if df_conf.loc['step_size_slice'].values[0] != '':
+            vals_default[cols_default.index('num_slice')] = ''
+    df_default = pd.DataFrame(index = cols_default, data = vals_default, columns = ['ParamValue'])
+
+    ## Update user config values with default ones
+    df_default.update(df_conf)
+    
+    ## Create parameters variable
+    params = df_default[df_default.columns[0]].T
+    
+    #### Verify that image parameters are in image list
+    if params.id_col not in list_col_names:
+        sys.exit("\nERROR: ID column missing in image list " + params.id_col + '\n')
     if params.ulay_col not in list_col_names:
-        sys.exit("Underlay column missing in image list")
-
-    ### Check overlay columns
-    params['num_olay'] = 0
-    if params.olay_col in list_col_names:
-        params['num_olay'] = 1
-    if params.olay_col2 in list_col_names:
-        params['num_olay'] = 2
-
-    ### Check mask column
-    params['num_mask'] = 0
-    if params.mask_col in list_col_names:
-        params['num_mask'] = 1
+        sys.exit("\nERROR: Underlay column missing in image list: " + params.ulay_col + '\n')
+    if (params.mask_col != '') & (params.mask_col not in list_col_names):
+            sys.exit("\nERROR: Mask column missing in image list: " + params.mask_col + '\n')
+    if (params.olay_col != '') & (params.olay_col not in list_col_names):
+            sys.exit("\nERROR: Overlay column missing in image list: " + params.olay_col + '\n')
+    if (params.olay_col2 != '') & (params.olay_col2 not in list_col_names):
+            sys.exit("\nERROR: Overlay column 2 missing in image list: " + params.olay_col2 + '\n')
+    
+    ### Find number of overlay and mask images
+    params['num_olay'] = int(params.olay_col != '') + int(params.olay_col2 != '')
+    params['num_mask'] = int(params.mask_col != '')
 
     ### Set additional params
     params['img_width_single'] = 1000  ### FIXME
 
-    ### Convert values for view plane to a list
-    if (params.view_plane == ''):
-        params.view_plane = []
-    else:
-        params.view_plane = [n for n in params.view_plane.split('+')]
+    ### Convert args with multiple values to lists
+    params.view_plane = [n for n in params.view_plane.split('+') if n != '']
+    params.sel_vals_olay = [int(n) for n in params.sel_vals_olay.split('+') if n != '']
+    params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.split('+') if n != '']
 
-    ### Convert selected values for overlay to a list
-    if (params.sel_vals_olay == ''):
-        params.sel_vals_olay = []
-    else:
-        params.sel_vals_olay = [int(n) for n in params.sel_vals_olay.split('+')]
+    #logger.info(params)
+    #input('p')
+
+    ### Convert numeric args from str to int or float
+    for tmp_arg in ['num_slice', 'step_size_slice', 'min_vox', 'crop_to_mask', 'crop_to_olay', 'bin_olay', 
+                    'is_edge', 'is_out_single', 'is_out_noqc', 'img_width']:
+        if params[tmp_arg] != '':
+            params[tmp_arg] = int(params[tmp_arg])
         
-    ### Convert selected values for overlay2 to a list
-    if params.sel_vals_olay2 == '':
-        params.sel_vals_olay2 = []
-    else:
-        params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.split('+')]
-
-    ### Update few params
-    if params.is_edge == 1:
+    for tmp_arg in ['alpha_olay', 'perc_high', 'perc_low']:
+        if params[tmp_arg] != '':
+            params[tmp_arg] = float(params[tmp_arg])
+    
+    ### Correct inconsistent parameters
+    if (params.is_edge == 1) & (params.alpha_olay != 1):
         params.alpha_olay = 1
-        logger.warning('is_edge selected for overlay, alpha reset to 1')
+        logger.warning('    is_edge = 1 was selected, alpha_olay is set to 1')
 
     return params
 
@@ -84,7 +123,7 @@ def create_dir(dir_name):
         if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
     except:
-        sys.exit("Could not create out folder !!!");
+        sys.exit("\nERROR: Could not create out folder !!!" + '\n');
 
 
 def create_log_files(outdir):
@@ -567,24 +606,21 @@ def create_report(list_file, config_file, out_dir):
         df_images = pd.read_csv(list_file)
         list_col_names = df_images.columns.values
     except:
-        sys.exit("ERROR: Could not read image list file: " + list_file)
+        sys.exit("\nERROR: Could not read image list file: " + list_file + '\n')
+    logger.info('    Image columns: [' + ', '.join(list_col_names) + ']')
 
-
-    ## Read params from config file
-    logger.info('  Reading configuration from: ' + config_file)
+    ## Read config file
+    logger.info('  Reading config file: ' + config_file)
     try:
-        df_conf = pd.read_csv(config_file).fillna('')
+        df_conf = pd.read_csv(config_file, dtype = 'str').fillna('')
     except:
-        sys.exit("ERROR: Could not read config file: " +  config_file);
-    params = df_conf.set_index('ParamName').ParamValue
+        sys.exit("\nERROR: Could not read config file: " +  config_file + '\n');
+    logger.info('     Config data: ' + '\n' + str(df_conf))
 
-    ## Convert numeric params
-    df_tmp = pd.to_numeric(params, errors='coerce')
-    params = df_tmp.combine_first(params)
-
-    ## Verify params
-    params = check_params(params, list_col_names)
-
+    ## Extract and check params
+    logger.info('  Checking config parameters ...')    
+    params = parse_config(df_conf, list_col_names)
+    
     logger.info('  QC report parameters: ' )
     logger.info(params)
 
