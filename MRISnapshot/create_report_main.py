@@ -255,15 +255,54 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     
     return [snapshot_caption, snapshot_name]
 
-def crop_nifti(nii_mask, nii_arr):
+def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
+    
+    ## Cropped image will not be smaller than this size
+    crop_min_size = 30
+    
+    ## Get mask image
     tmp_img = nii_mask.get_fdata()
-    x = np.any(tmp_img, axis=(1, 2))
-    y = np.any(tmp_img, axis=(0, 2))
-    z = np.any(tmp_img, axis=(0, 1))
+    
+    ## Find crop coordinates in different orientations
+    coor_crop = np.zeros([3, 2])
+    for i, tmp_axis in enumerate([(1, 2), (0, 2), (0, 1)]):
+    
+        ind_nz = np.where(np.any(tmp_img, axis = tmp_axis))[0]
+        
+        ## Empty mask, all values are zero; no cropping
+        if ind_nz.shape[0] == 0:
+            return nii_arr
+        
+        ## Get non-zero boundaries
+        if nzx.shape[0] == 1:           ## Mask has a single non-zero slice; special case
+            xmin = np.where(x)[0][0]
+            xmax = np.where(x)[0][0]
+        else:
+            xmin, xmax = np.where(x)[0][[0, -1]]
 
-    xmin, xmax = np.where(x)[0][[0, -1]] + [-2, 2]
-    ymin, ymax = np.where(y)[0][[0, -1]] + [-2, 2]
-    zmin, zmax = np.where(z)[0][[0, -1]] + [-2, 2]
+        if nzy.shape[0] == 1:           ## Mask has a single non-zero slice; special case
+            ymin = np.where(y)[0][0]
+            ymax = np.where(y)[0][0]
+        else:
+            ymin, ymax = np.where(y)[0][[0, -1]]
+        
+        if nzz.shape[0] == 1:           ## Mask has a single non-zero slice; special case
+            zmin = np.where(z)[0][0]
+            zmax = np.where(z)[0][0]
+        else:
+            ymin, ymax = np.where(y)[0][[0, -1]]
+
+        ## Add padding
+        xsize = xmax - xmin
+        xpad = np.ceil(xsize * padding_ratio)
+        new_xsize = xsize + xpad * 2
+        xmin = xmin - 
+        
+        ysize = ymax - ymin
+        ysize = zmax - zmin
+        
+        xmin = xmin - crop_margin_percent * xmin 
+    
 
     out_arr = []
     for i, tmp_nii in enumerate(nii_arr):
