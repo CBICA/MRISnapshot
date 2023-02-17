@@ -53,12 +53,12 @@ def parse_config(df_conf, list_col_names):
     ## Create dataframe with default values
     cols_default = ['id_col', 'ulay_col', 'mask_col', 'olay_col', 'olay_col2', 'sel_vals_olay', 
                     'sel_vals_olay2', 'view_plane', 'num_slice', 'step_size_slice',
-                    'min_vox', 'crop_to_mask', 'crop_to_olay', 'bin_olay', 
+                    'min_vox', 'crop_to_mask', 'crop_to_olay', 'padding_ratio', 'bin_olay', 
                     'is_edge', 'alpha_olay', 'perc_high', 'perc_low', 
                     'is_out_single', 'is_out_noqc', 'img_width']
     vals_default = ['', '', '', '', '', '', 
                     '', 'A', '4', '',
-                    '1', '0', '0', '1', 
+                    '1', '0', '0', '', '1', 
                     '1', '1', '99', '1', 
                     '1', '0', '300']
     if 'step_size_slice' in df_conf.index:              ## If step_size_slice is set default num_slices will be empty
@@ -73,6 +73,7 @@ def parse_config(df_conf, list_col_names):
     params = df_default[df_default.columns[0]].T
     
     #### Verify that image parameters are in image list
+    
     if params.id_col not in list_col_names:
         sys.exit("\nERROR: ID column missing in image list " + params.id_col + '\n')
     if params.ulay_col not in list_col_names:
@@ -83,6 +84,8 @@ def parse_config(df_conf, list_col_names):
             sys.exit("\nERROR: Overlay column missing in image list: " + params.olay_col + '\n')
     if (params.olay_col2 != '') & (params.olay_col2 not in list_col_names):
             sys.exit("\nERROR: Overlay column 2 missing in image list: " + params.olay_col2 + '\n')
+
+    #### Check parameters
     
     ### Find number of overlay and mask images
     params['num_olay'] = int(params.olay_col != '') + int(params.olay_col2 != '')
@@ -105,7 +108,7 @@ def parse_config(df_conf, list_col_names):
         if params[tmp_arg] != '':
             params[tmp_arg] = int(params[tmp_arg])
         
-    for tmp_arg in ['alpha_olay', 'perc_high', 'perc_low']:
+    for tmp_arg in ['alpha_olay', 'perc_high', 'perc_low', 'padding_ratio']:
         if params[tmp_arg] != '':
             params[tmp_arg] = float(params[tmp_arg])
     
@@ -156,7 +159,7 @@ def get_nifti(df_images, sub_index, col_name, orient = 'LPS'):
             nii = nii.as_reoriented(transform)
     return nii, fname
 
-def get_nifti_to_standard(df_images, sub_index, col_name, orient = 'LPS'):
+def get_nifti_to_standard(df_images, sub_index, col_name, orient = 'LPS', order = 0):
     ''' Read nifti image in image list and reorient 
     '''
     fname = ''
@@ -164,7 +167,7 @@ def get_nifti_to_standard(df_images, sub_index, col_name, orient = 'LPS'):
     if col_name in df_images:
         fname = df_images.loc[sub_index][col_name]    
         nii = nib.load(fname)
-        nii = nibp.conform(nii, order = 1, orientation='RAS')
+        nii = nibp.conform(nii, order = order, orientation='RAS')
     return nii, fname
 
 def get_img_mat(nii, orient = 'LPS'):
@@ -324,6 +327,10 @@ def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
 
         ## Add padding
         b_size = b_max - b_min
+        
+        #logger.info(b_size)
+        #logger.info(b_size)
+        
         b_pad = np.ceil(b_size * padding_ratio)
         b_size_padded = b_size + b_pad * 2 
         if b_size_padded < crop_min_size:           ## If padded size is smaller than min required size
@@ -391,24 +398,32 @@ def create_snapshots(params, df_images, dir_snapshots_full):
             #nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
 
             logger.info('    Reading images for subject ' + str(sub_index + 1) + ' / ' + str(num_images))
-            nii_ulay, fname_ulay  = get_nifti_to_standard(df_images, sub_index, params.ulay_col)
+            nii_ulay, fname_ulay  = get_nifti_to_standard(df_images, sub_index, params.ulay_col, order = 3)
             nii_mask, fname_mask  = get_nifti_to_standard(df_images, sub_index, params.mask_col)
             nii_olay, fname_olay  = get_nifti_to_standard(df_images, sub_index, params.olay_col)
             nii_olay2, fname_olay2  = get_nifti_to_standard(df_images, sub_index, params.olay_col2)
 
+            #logger.info(fname_olay)
+            #nib.save(nii_olay, '/home/guraylab/AIBIL/Github/MRISnapshot/tests/Input/Scans/Scan1/Scan1_T1_ROIMASK_V2.nii.gz')
+            #input()
+
             ## Select values in the overlay images
             if len(params.sel_vals_olay) > 0:
-                nii_olay = sel_vals_nifti(nii_olay2, params.sel_vals_olay)
+                nii_olay = sel_vals_nifti(nii_olay, params.sel_vals_olay)
             if len(params.sel_vals_olay2) > 0:
                 nii_olay2 = sel_vals_nifti(nii_olay2, params.sel_vals_olay2)
 
             ## Crop input images
             if params.crop_to_mask == 1:
                 [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_mask, 
-                                                                       [nii_ulay, nii_mask, nii_olay, nii_olay2])
+                                                                       [nii_ulay, nii_mask, 
+                                                                        nii_olay, nii_olay2],
+                                                                       params.padding_ratio)
             if params.crop_to_olay == 1:
                 [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_olay, 
-                                                                       [nii_ulay, nii_mask, nii_olay, nii_olay2])
+                                                                       [nii_ulay, nii_mask, 
+                                                                        nii_olay, nii_olay2],
+                                                                       params.padding_ratio)
 
             # Initialize containers to keep image info
             snapshot_name_all = []
@@ -615,13 +630,13 @@ def create_report(list_file, config_file, out_dir):
         df_conf = pd.read_csv(config_file, dtype = 'str').fillna('')
     except:
         sys.exit("\nERROR: Could not read config file: " +  config_file + '\n');
-    logger.info('     Config data: ' + '\n' + str(df_conf))
+    logger.info('     User config data: ' + '\n' + str(df_conf))
 
     ## Extract and check params
     logger.info('  Checking config parameters ...')    
     params = parse_config(df_conf, list_col_names)
     
-    logger.info('  QC report parameters: ' )
+    logger.info('    Parameters for QC report (missing values are updated with default ones): ' )
     logger.info(params)
 
     ### Create out dirs
