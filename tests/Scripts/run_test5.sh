@@ -2,6 +2,7 @@
 
 indir=`pwd`/../Input/Scans
 indir='/home/guraylab/AIBIL/Projects/MRISnapshot/Pipelines/20230215_PrepTestData/Test'
+indir='/home/guray/Github/Test/MRISnapshotTestData/Test'
 outdir=`pwd`/../Output/Test5
 
 

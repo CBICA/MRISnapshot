@@ -128,7 +128,6 @@ def create_dir(dir_name):
     except:
         sys.exit("\nERROR: Could not create out folder !!!" + '\n');
 
-
 def create_log_files(outdir):
     '''Create log files
     '''
@@ -167,7 +166,7 @@ def get_nifti_to_standard(df_images, sub_index, col_name, orient = 'LPS', order 
     if col_name in df_images:
         fname = df_images.loc[sub_index][col_name]    
         nii = nib.load(fname)
-        nii = nibp.conform(nii, order = order, orientation='RAS')
+        nii = nibp.conform(nii, out_shape = [400, 400, 400], order = order, orientation = orient)
     return nii, fname
 
 def get_img_mat(nii, orient = 'LPS'):
@@ -353,6 +352,9 @@ def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
         else:
             cropped_nii = tmp_nii.slicer[b_crop[0,0]:b_crop[0,1], b_crop[1,0]:b_crop[1,1], 
                                          b_crop[2,0]:b_crop[2,1]]
+
+            cropped_nii = nibp.conform(cropped_nii, order = 1, orientation = 'LPS')
+            
             out_arr.append(cropped_nii)
 
     logger.info('    Images cropped to (x, y, z): ' + str(b_crop[0]) + ', ' + str(b_crop[1]) + ', ' + str(b_crop[2]))
