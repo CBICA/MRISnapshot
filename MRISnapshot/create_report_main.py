@@ -296,7 +296,7 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     
     return [snapshot_caption, snapshot_name]
 
-def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
+def crop_nifti_tmp(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
     ''' Crops a set of nifti images to the bounding box of the mask
     '''
     
@@ -367,6 +367,78 @@ def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
     logger.info('    Images cropped to (x, y, z): ' + str(b_coors[0]) + ', ' + str(b_coors[1]) + ', ' + str(b_coors[2]))
 
     return out_arr
+
+def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
+    ''' Crops a set of nifti images to the bounding box of the mask
+    '''
+    
+    ## Min size in each dimension for the cropped image
+    crop_min_size = 30
+    nii_vox_size = np.array(nii_mask.header.get_zooms())[0:3]
+    crop_min_xyz = np.ceil(float(crop_min_size) / nii_vox_size).astype(int)
+    
+    ## Get mask image
+    tmp_img = nii_mask.get_fdata()
+    img_dim = tmp_img.shape
+    
+    ## Calculate init cropping boundaries in 3 orientations
+    b_coors = np.zeros([3, 2]).astype(int)
+    b_sizes = np.zeros([3])
+    for i, tmp_axis in enumerate([(1, 2), (0, 2), (0, 1)]):
+        ind_nz = np.where(np.any(tmp_img, axis = tmp_axis))[0]
+        
+        ## If empty mask with all values are zero; no cropping
+        if ind_nz.shape[0] == 0:
+            return nii_arr
+        
+        ## Get non-zero boundaries
+        b_min = ind_nz[0]                  ## Left boundary is the first non-zero index
+        if ind_nz.shape[0] > 1:           
+            b_max = ind_nz[-1]           ## Right boundary is the last non-zero index
+        else:
+            b_max = b_min                 ## Mask has a single non-zero slice; special case
+
+        b_coors[i, 0] = int(b_min)
+        b_coors[i, 1] = int(b_max)
+        b_sizes[i] = (b_max - b_min) * nii_vox_size[i]
+    
+    ## Calculate padded crop size (crop to size of the view with max size) 
+    b_max_size = b_sizes.max()
+    b_padded_size = b_max_size + b_max_size * padding_ratio * 2
+    b_padded_size = int(np.max([b_padded_size, crop_min_size]))
+    b_padded_dims = np.ceil(float(b_padded_size) / nii_vox_size).astype(int)
+
+    ## Calculate final cropping boundaries in 3 orientations
+    for i, tmp_axis in enumerate([0, 1, 2]):
+        b_center = float(b_coors[i, 0] + b_coors[i, 1]) / 2 
+        b_half_size = float(b_padded_dims[i]) / 2
+        b_min = int(np.ceil(b_center - b_half_size))
+        b_max = int(np.ceil(b_center + b_half_size))
+        b_coors[i, 0] = np.max([0, b_min])           # Correct if start of crop boundary is smaller than 0
+        b_coors[i, 1] = np.min([img_dim[i] - 1, b_max])  # Correct if end of crop boundary is larger than img size
+
+    logger.info(b_padded_size)
+    logger.info(b_coors)
+    input()
+        
+    ## Crop and reshape all images
+    out_arr = []
+    for i, tmp_nii in enumerate(nii_arr):
+        if tmp_nii is None:
+            out_arr.append(tmp_nii)
+        else:
+            ## Crop images
+            cropped_nii = tmp_nii.slicer[b_coors[0,0]:b_coors[0,1], b_coors[1,0]:b_coors[1,1], 
+                                         b_coors[2,0]:b_coors[2,1]]
+            cropped_nii = nibp.conform(cropped_nii, out_shape = [b_padded_size, b_padded_size, b_padded_size],
+                                       order = interp_order[i], orientation = 'LPS')
+            out_arr.append(cropped_nii)
+
+    logger.info('    Images cropped to (x, y, z): ' + str(b_coors[0]) + 
+                ', ' + str(b_coors[1]) + ', ' + str(b_coors[2]))
+
+    return out_arr
+
 
 def sel_vals_nifti(in_nii, sel_vals):
     '''Select a set of values from the input image
