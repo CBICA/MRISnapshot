@@ -158,17 +158,6 @@ def get_nifti(df_images, sub_index, col_name, orient = 'LPS'):
             nii = nii.as_reoriented(transform)
     return nii, fname
 
-def get_nifti_to_standard(df_images, sub_index, col_name, orient = 'LPS', order = 0):
-    ''' Read nifti image in image list and reorient 
-    '''
-    fname = ''
-    nii = None
-    if col_name in df_images:
-        fname = df_images.loc[sub_index][col_name]    
-        nii = nib.load(fname)
-        nii = nibp.conform(nii, out_shape = [400, 400, 400], order = order, orientation = orient)
-    return nii, fname
-
 def get_img_mat(nii, orient = 'LPS'):
     ''' Reorient nifti and get data matrix
     '''
@@ -190,52 +179,55 @@ def calc_sel_slices_tmp():
 
 def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, sub_id):
     '''Select slices that will be used to create snapshots
+       Slice selection algorithm:
+        - Detect eligible voxels:
+            - Mask image non-zero voxels if there is a mask
+            - Overlay image non-zero voxels if there is an overlay            
+            - Underlay image non-zero voxels otherwise
+        - Detect eligible slices
+            - Those where the number of non-zero voxels in a slice is larger than user threshold
+        - Select from them based on user parameters
+            - num_slices (n): Select n slices with equal step sizes
+            - step_size_slice (s): Select all slices with step size s
     '''
-    ## Detect mask image
-    ##  - If mask img is provided, it's used as a mask
-    ##  - If not
-    ##      - If overlay img is provided, it's used as a mask
-    ##      - If not, underlay img is used as a mask     
-    
-    if img_mask is None:
-        if img_olay is None:
-            img_mask = (img_ulay > 0).astype(int)
-        else:
+    ## Create non-zero mask
+    if img_mask is not None:
+        nz_mask = (img_mask > 0).astype(int)
+    else:
+        if img_olay is not None:
             if img_olay2 is not None:
                 img_olay = img_olay + img_olay2
-            img_mask = (img_olay > 0).astype(int)
+            nz_mask = (img_olay > 0).astype(int)
+        else:
+            nz_mask = (img_ulay > 0).astype(int)
 
     ## Detect indices of non-zero slices
-    ind_slice_nz = np.where(np.sum(img_mask, axis = (0, 1)) >= params.min_vox)[0]
-    num_slice_nz = ind_slice_nz.size
-
-    if num_slice_nz == 0:
-        msg = "No slice to show: " + params.view_plane + " , " + str(sub_index) + ":" + sub_id
-        logger.warning(msg)
-        
-    # Select using absolute value of params.num_slice as step size
-    if params.num_slice < 0:       
-        if -1*params.NumSlice > num_slice_nz:        # Not enough slices, just show the one in middle
-            sl_sel = ind_slice_nz[num_slice_nz / 2]
-        else:
-            sel_inds = np.arange(params.num_slice / 2.0, num_slice_nz, -1 * params.num_slice)
-            sel_inds = sel_inds[1:].round().astype(int)
-            sl_sel = ind_slice_nz[sel_inds]
+    ind_nz = np.where(np.sum(nz_mask, axis = (0, 1)) >= params.min_vox)[0]
+    num_nz = ind_nz.size
     
-    # Select using params.num_slice as total number of slices
-    else:                        
-        if num_slice_nz <= params.num_slice:
-            sl_sel = ind_slice_nz
-        else:
-            hstep = float(num_slice_nz) / params.num_slice
-            sel_inds = np.arange(-1.0 * hstep / 2.0, num_slice_nz, hstep)
-            sel_inds = sel_inds[1:].round().astype(int)
-            sl_sel = ind_slice_nz[sel_inds]
+    logger.info(ind_nz)
 
-    if isinstance(sl_sel, np.int64):
-        sl_sel = np.array([sl_sel])
+    sl_sel = ind_nz
+    if num_nz <= 1:       ## 0 or 1 slice to select
+        return sl_sel
+        
+    ## Select slices based on params.step_size_slice
+    if params.step_size_slice != '':
+        hstep = float(num_nz % params.step_size_slice) /  2
+        sl_sel = np.unique(np.round(np.arange(hstep, num_nz-1-hstep, params.step_size_slice)))
 
-    return sl_sel
+    ## Select slices based on params.num_slice
+    if params.num_slice != '':
+        hstep = (float(num_nz - 1) / params.num_slice) / 2
+        sl_sel = np.unique(np.round(np.linspace(hstep, num_nz-1-hstep, params.num_slice)))
+        if sl_sel.shape[0] < params.num_slice:
+            sl_sel = np.unique(np.round(np.linspace(0, num_nz-1, params.num_slice)))
+
+    logger.info(sl_sel)
+    logger.info(ind_nz)
+    #input()
+
+    return ind_nz[sl_sel.astype(int)]
 
 def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
     '''Change contrast of the image using percentile values
@@ -250,7 +242,7 @@ def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
     img = img - scale_low
     nii_out = nib.Nifti1Image(img, nii_img.affine, nii_img.header)
     
-    logger.info('    Underlay image contrast adjusted to ([min, max]): [' + str(scale_low) + ', ' + str(scale_high) + 
+    logger.info('      Underlay image contrast adjusted to ([min, max]): [' + str(scale_low) + ', ' + str(scale_high) + 
 ']')
     return nii_out
 
@@ -296,86 +288,14 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     
     return [snapshot_caption, snapshot_name]
 
-def crop_nifti_tmp(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
+def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
     ''' Crops a set of nifti images to the bounding box of the mask
     '''
     
     ## Min size in each dimension for the cropped image
-    crop_min_size = 30
+    CROP_MIN_SIZE = 30
     nii_vox_size = np.array(nii_mask.header.get_zooms())[0:3]
-    crop_min_xyz = np.ceil(float(crop_min_size) / nii_vox_size).astype(int)
-    
-    ## Get mask image
-    tmp_img = nii_mask.get_fdata()
-    
-    ## Calculate cropping boundaries in 3 orientations
-    b_coors = np.zeros([3, 2]).astype(int)
-    b_dims = np.zeros([3])
-    for i, tmp_axis in enumerate([(1, 2), (0, 2), (0, 1)]):
-    
-        ind_nz = np.where(np.any(tmp_img, axis = tmp_axis))[0]
-        img_dim = ind_nz.shape[0]
-        
-        ## If empty mask with all values are zero; no cropping
-        if ind_nz.shape[0] == 0:
-            return nii_arr
-        
-        ## Get non-zero boundaries
-        b_min = ind_nz[0]                  ## Left boundary is the first non-zero index
-        if ind_nz.shape[0] > 1:           
-            b_max = ind_nz[-1]           ## Right boundary is the last non-zero index
-        else:
-            b_max = b_min                 ## Mask has a single non-zero slice; special case
-
-        ## Add padding
-        b_size = b_max - b_min
-        
-        #logger.info(b_size)
-        #logger.info(b_size)
-        
-        b_pad = np.ceil(b_size * padding_ratio)
-        b_size_padded = b_size + b_pad * 2 
-        if b_size_padded < crop_min_xyz[i]:           ## If padded size is smaller than min required size
-            b_pad = np.ceil((crop_min_xyz[i] - b_size) / 2)
-        b_min = np.max([0, b_min - b_pad])            ## Set padded boundary, correcting if it's smaller than 0
-        b_max = np.max([img_dim, b_max + b_pad])      ## Set padded boundary, correcting if it's larger than img size
-        
-        ## Save calculated cboundaries
-        b_coors[i, 0] = int(b_min)
-        b_coors[i, 1] = int(b_max)
-    
-        b_dims[i] = (b_max - b_min) * nii_vox_size[i]
-    
-    #logger.info(b_coors)
-    #input()
-
-    b_dims_max = int(np.ceil(np.max(b_dims)))
-    
-    ## Crop and reshape all images
-    out_arr = []
-    for i, tmp_nii in enumerate(nii_arr):
-        if tmp_nii is None:
-            out_arr.append(tmp_nii)
-        else:
-            ## Crop images
-            cropped_nii = tmp_nii.slicer[b_coors[0,0]:b_coors[0,1], b_coors[1,0]:b_coors[1,1], 
-                                         b_coors[2,0]:b_coors[2,1]]
-            cropped_nii = nibp.conform(cropped_nii, out_shape = [b_dims_max, b_dims_max, b_dims_max],
-                                       order = interp_order[i], orientation = 'LPS')
-            out_arr.append(cropped_nii)
-
-    logger.info('    Images cropped to (x, y, z): ' + str(b_coors[0]) + ', ' + str(b_coors[1]) + ', ' + str(b_coors[2]))
-
-    return out_arr
-
-def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
-    ''' Crops a set of nifti images to the bounding box of the mask
-    '''
-    
-    ## Min size in each dimension for the cropped image
-    crop_min_size = 30
-    nii_vox_size = np.array(nii_mask.header.get_zooms())[0:3]
-    crop_min_xyz = np.ceil(float(crop_min_size) / nii_vox_size).astype(int)
+    crop_min_xyz = np.ceil(float(CROP_MIN_SIZE) / nii_vox_size).astype(int)
     
     ## Get mask image
     tmp_img = nii_mask.get_fdata()
@@ -405,7 +325,7 @@ def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
     ## Calculate padded crop size (crop to size of the view with max size) 
     b_max_size = b_sizes.max()
     b_padded_size = b_max_size + b_max_size * padding_ratio * 2
-    b_padded_size = int(np.max([b_padded_size, crop_min_size]))
+    b_padded_size = int(np.max([b_padded_size, CROP_MIN_SIZE]))
     b_padded_dims = np.ceil(float(b_padded_size) / nii_vox_size).astype(int)
 
     ## Calculate final cropping boundaries in 3 orientations
@@ -416,10 +336,6 @@ def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
         b_max = int(np.ceil(b_center + b_half_size))
         b_coors[i, 0] = np.max([0, b_min])           # Correct if start of crop boundary is smaller than 0
         b_coors[i, 1] = np.min([img_dim[i] - 1, b_max])  # Correct if end of crop boundary is larger than img size
-
-    logger.info(b_padded_size)
-    logger.info(b_coors)
-    input()
         
     ## Crop and reshape all images
     out_arr = []
@@ -430,14 +346,36 @@ def crop_nifti(nii_mask, nii_arr, interp_order, padding_ratio  = 0.1):
             ## Crop images
             cropped_nii = tmp_nii.slicer[b_coors[0,0]:b_coors[0,1], b_coors[1,0]:b_coors[1,1], 
                                          b_coors[2,0]:b_coors[2,1]]
-            cropped_nii = nibp.conform(cropped_nii, out_shape = [b_padded_size, b_padded_size, b_padded_size],
-                                       order = interp_order[i], orientation = 'LPS')
             out_arr.append(cropped_nii)
 
-    logger.info('    Images cropped to (x, y, z): ' + str(b_coors[0]) + 
+    logger.info('      Images cropped to (x, y, z): ' + str(b_coors[0]) + 
                 ', ' + str(b_coors[1]) + ', ' + str(b_coors[2]))
 
     return out_arr
+
+
+def resize_nifti(nii_arr, interp_order):
+    '''Resize to 1x1x1 mm with size max_size x max_size x max_size
+    '''
+
+    nii_vox_size = np.array(nii_arr[0].header.get_zooms())[0:3]
+    nii_img_dims = np.array(nii_arr[0].get_fdata().shape)[0:3]
+    max_size = int(np.ceil(np.max(nii_vox_size * nii_img_dims)))
+
+    out_arr = []
+    for i, tmp_nii in enumerate(nii_arr):
+        if tmp_nii is None:
+            out_arr.append(tmp_nii)
+        else:
+            ## Resize images
+            tmp_nii = nibp.conform(tmp_nii, out_shape = [max_size, max_size, max_size],
+                                       order = interp_order[i], orientation = 'LPS')
+            out_arr.append(tmp_nii)
+
+    logger.info('      Images resized to: ' + str([max_size, max_size, max_size]))
+
+    return out_arr
+
 
 
 def sel_vals_nifti(in_nii, sel_vals):
@@ -472,21 +410,11 @@ def create_snapshots(params, df_images, dir_snapshots_full):
         img_info_all = [];
         for sub_index, sub_id in enumerate(df_images[params.id_col]):
 
-            ### Read input images
-            #nii_ulay, fname_ulay  = get_nifti(df_images, sub_index, params.ulay_col)
-            #nii_mask, fname_mask  = get_nifti(df_images, sub_index, params.mask_col)
-            #nii_olay, fname_olay  = get_nifti(df_images, sub_index, params.olay_col)
-            #nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
-
             logger.info('    Reading images for subject ' + str(sub_index + 1) + ' / ' + str(num_images))
             nii_ulay, fname_ulay  = get_nifti(df_images, sub_index, params.ulay_col)
             nii_mask, fname_mask  = get_nifti(df_images, sub_index, params.mask_col)
             nii_olay, fname_olay  = get_nifti(df_images, sub_index, params.olay_col)
             nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
-
-            #logger.info(fname_olay)
-            #nib.save(nii_olay, '/home/guraylab/AIBIL/Github/MRISnapshot/tests/Input/Scans/Scan1/Scan1_T1_ROIMASK_V2.nii.gz')
-            #input()
 
             ## Select values on overlay images
             if len(params.sel_vals_olay) > 0:
@@ -498,15 +426,18 @@ def create_snapshots(params, df_images, dir_snapshots_full):
             if params.crop_to_mask == 1:
                 [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_mask, 
                                                                        [nii_ulay, nii_mask, 
-                                                                        nii_olay, nii_olay2],
-                                                                       [1, 0, 0, 0],
+                                                                       nii_olay, nii_olay2],
                                                                        params.padding_ratio)
             if params.crop_to_olay == 1:
                 [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_olay, 
                                                                        [nii_ulay, nii_mask, 
-                                                                        nii_olay, nii_olay2],
-                                                                       [1, 0, 0, 0],
+                                                                       nii_olay, nii_olay2],
                                                                        params.padding_ratio)
+
+            ## Resize input images
+            interp_order = [1, 0, 0, 0]
+            [nii_ulay, nii_mask, nii_olay, nii_olay2] = resize_nifti([nii_ulay, nii_mask, 
+                                                                      nii_olay, nii_olay2], interp_order)
 
             # Initialize containers to keep image info
             snapshot_name_all = []
@@ -524,10 +455,11 @@ def create_snapshots(params, df_images, dir_snapshots_full):
                 img3d_mask = get_img_mat(nii_mask, d_orient[curr_view]) 
                 img3d_olay = get_img_mat(nii_olay, d_orient[curr_view]) 
                 img3d_olay2 = get_img_mat(nii_olay2, d_orient[curr_view]) 
-            
+                       
                 ### Select slices to show
                 list_sel_slices = calc_sel_slices(img3d_ulay, img3d_mask, img3d_olay, 
                                                   img3d_olay2, params, sub_index, sub_id)
+                logger.info('      Selected slices in view ' + str(curr_view) + ' : ' + str(list_sel_slices))
                 
                 for slice_index, curr_slice in enumerate(list_sel_slices):
                     info_snapshot = extract_snapshot(img3d_ulay, img3d_olay, img3d_olay2, params, 

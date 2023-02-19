@@ -60,7 +60,7 @@ def prep_dataset(params):
         dict_default = {'id_col' : 'ScanID', 
                         'ulay_col' : 'UnderlayImg', 'mask_col' : 'MaskImg', 
                         'olay_col' : 'OverlayImg', 'olay_col2' : 'OverlayImg2', 
-                        'sel_vals_olay' : '47', 'sel_vals_olay2' : '',
+                        'sel_vals_olay' : '', 'sel_vals_olay2' : '',
                         'view_plane' : 'A+S+C',
                         'num_slice' : 5, 'step_size_slice' : '',
                         'min_vox' : 1,
