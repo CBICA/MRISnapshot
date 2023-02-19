@@ -72,8 +72,10 @@ def prep_dataset(params):
                         'alpha_olay' : 1, 
                         'perc_high' : 100, 'perc_low' : 0, 
                         'is_out_single' : 0, 'is_out_noqc' : 0, 
-                        'img_width' : 300
-                    }
+                        'img_width' : 300,
+                        'label_checkbox1' : 'PASS',
+                        'label_checkbox2' : 'FAIL',
+                        'label_editbox' : 'Notes'}
         
         ## Reset default values for missing image types
         if params.s_mask == None:

@@ -55,12 +55,14 @@ def parse_config(df_conf, list_col_names):
                     'sel_vals_olay2', 'view_plane', 'num_slice', 'step_size_slice',
                     'min_vox', 'crop_to_mask', 'crop_to_olay', 'padding_ratio', 'bin_olay', 
                     'is_edge', 'alpha_olay', 'perc_high', 'perc_low', 
-                    'is_out_single', 'is_out_noqc', 'img_width']
+                    'is_out_single', 'is_out_noqc', 'img_width',
+                    'label_checkbox1', 'label_checkbox2', 'label_editbox']
     vals_default = ['', '', '', '', '', '', 
                     '', 'A', '4', '',
                     '1', '0', '0', '', '1', 
                     '1', '1', '99', '1', 
-                    '1', '0', '300']
+                    '1', '0', '300',
+                    'PASS', 'FAIL', 'Notes']
     if 'step_size_slice' in df_conf.index:              ## If step_size_slice is set default num_slices will be empty
         if df_conf.loc['step_size_slice'].values[0] != '':
             vals_default[cols_default.index('num_slice')] = ''
@@ -135,10 +137,18 @@ def create_log_files(outdir):
     #errFile = outdir + os.sep + 'log_' + EXEC_NAME + '_' + startTimePretty + '.stderr'
     writeLog(logFile, '''------------------------''')
 
+def copy_edited_js(path_utils, out_dir, report_hdr_txt):
+    '''Copy js scripts
+    '''
+    fin = os.path.join(path_utils, 'save_qcform.js')
+    fout = os.path.join(out_dir, 'save_qcform.js')
+    new_text = 'textHdr = "' + report_hdr_txt + '"\n'
+
+    open(fout, 'w').write(new_text + open(fin).read())
+
 def copy_js(path_utils, out_dir):
     '''Copy js scripts
     '''
-    shutil.copy(os.path.join(path_utils, 'save_qcform.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'misc_func.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'shortcut.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'load_back.js'), out_dir)
@@ -526,6 +536,13 @@ img_info_all, out_report):
         # Header for file with multiple snapshots
         HTML_multi_snapshot = html.htmlSubjectPrefix(sub_id, i+1, numItem, fname_ulay, 
                                                      fname_olay, fname_olay2)
+
+        ## Add QC form
+        HTML_multi_snapshot = HTML_multi_snapshot + '\n' + '<p style="clear: both;"><br>'        
+        if params.is_out_noqc == 0:
+            # Add qc form to html page for the subject
+            HTML_multi_snapshot = HTML_multi_snapshot + '\n' + \
+                    html.htmlQCForm(params.label_checkbox1, params.label_checkbox2, params.label_editbox)
             
         for j, snapshot_name in enumerate(snapshot_name_all):
             snapshot_caption = snapshot_caption_all[j]
@@ -570,11 +587,6 @@ img_info_all, out_report):
 
         # Prepare html page for the subject (with all snapshots)
         html_sub = sub_id + '_mriqc.html'
-        HTML_multi_snapshot = HTML_multi_snapshot + '\n' + '<p style="clear: both;"><br>'
-        
-        if params.is_out_noqc == 0:
-            # Add qc form to html page for the subject
-            HTML_multi_snapshot = HTML_multi_snapshot + '\n' + html.htmlQCForm('EXC-Img', 'EXC-Proc', 'Notes',)
 
         if params.is_out_single == 1:
             # Prepare html page for all subjects together
@@ -667,7 +679,11 @@ def create_report(list_file, config_file, out_dir):
     create_dir(dir_scripts)
     
     ## Copy js files
+    report_hdr_txt = 'ID,' + params.label_checkbox1 + ',' + params.label_checkbox2 + ',' + \
+                             params.label_editbox
+    
     copy_js(path_templates, dir_scripts)
+    copy_edited_js(path_templates, dir_scripts, report_hdr_txt)
     
     ### Create snapshots
     logger.info('  Creating snapshots ...' )
