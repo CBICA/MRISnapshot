@@ -50,8 +50,8 @@ coverage.xml
 docs/_build/
 
 # test outputs
-tests/Output
-tests/tmp*
+Tests/Output
+Tests/tmp*
 
 .*
 __pycache__
