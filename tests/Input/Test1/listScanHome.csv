@@ -1,4 +1,0 @@
-SCID,T1,Bmask,ROI
-Scan1,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan1/Scan1_T1.nii.gz,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan1/Scan1_bmask.nii.gz,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan1/Scan1_ROI.nii.gz
-Scan2,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan2/Scan2_T1.nii.gz,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan2/Scan2_bmask.nii.gz,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan2/Scan2_ROI.nii.gz
-Scan3,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan3/Scan3_T1.nii.gz,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan3/Scan3_bmask.nii.gz,/home/guray/Github/MRISnapshot/tests/Input/Test1/Scan3/Scan3_ROI.nii.gz
