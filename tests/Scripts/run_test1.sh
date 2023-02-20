@@ -7,10 +7,16 @@ outdir=`pwd`/../Output/Test1
 mkdir -pv $outdir
 
 # Create list and configuration file
-cmd="prep_dataset -i $indir --ulay _T1_DS.nii.gz --olay _T1_ICVMASK.nii.gz --olay2 _T1_BRAINMASK.nii.gz -d $outdir --mask _T1_ICVMASK.nii.gz"
+cmd="snap_prep_data -i $indir -s _T1_DS.nii.gz -d $outdir --mask _T1_ICVMASK.nii.gz --olay _T1_ICVMASK.nii.gz --olay2
+_T1_BRAINMASK.nii.gz"
+
 $cmd
 
-# Run MRISnaphot report
-cmd="create_report -d $outdir"
-$cmd
+# echo $cmd
+# echo lllllllll
+
+
+# # Run MRISnaphot report
+# cmd="create_report -d $outdir"
+# $cmd
 

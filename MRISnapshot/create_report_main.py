@@ -16,18 +16,8 @@ import nibabel as nib
 import nibabel.processing as nibp
 from nibabel.orientations import axcodes2ornt, ornt_transform, inv_ornt_aff
 
-
-## Set logger  ## FIXME to be updated
-import logging
-format='%(levelname)-8s [%(filename)s : %(lineno)d - %(funcName)20s()] %(message)s'
-format='%(levelname)-8s %(message)s'
-logging.basicConfig(level=logging.DEBUG, format = '\n' + format, datefmt='%Y-%m-%d:%H:%M:%S')
-logger = logging.getLogger(__name__)
-
-##logger.setLevel(logging.DEBUG)      ## While debugging
-logger.setLevel(logging.INFO)    ## FIXME Debug comments will be removed in release version
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-
+import MRISnapshot.utils.mylogger as mylogger
+logger = mylogger.logger
 
 def parse_config(df_conf, list_col_names):
     '''Read config list and check params

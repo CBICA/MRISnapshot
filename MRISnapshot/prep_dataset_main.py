@@ -4,16 +4,7 @@ import pandas as pd
 import glob
 import os
 
-## Set logger  ## FIXME to be updated
-import logging
-format='%(levelname)-8s [%(filename)s : %(lineno)d - %(funcName)20s()] %(message)s'
-format='%(levelname)-8s %(message)s'
-logging.basicConfig(level=logging.DEBUG, format = '\n' + format, datefmt='%Y-%m-%d:%H:%M:%S')
-logger = logging.getLogger(__name__)
-
-##logger.setLevel(logging.DEBUG)      ## While debugging
-logger.setLevel(logging.INFO)    ## FIXME Debug comments will be removed in release version
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+import MRISnapshot.utils.mylogger as mylogger
 
 def add_img_names(df, in_dir, suffix, col_name):
     if suffix != None:
@@ -27,6 +18,7 @@ def add_img_names(df, in_dir, suffix, col_name):
 def prep_dataset(params):
     '''Create image list and copy default configuration file
     '''
+    logger = mylogger.logger
 
     ## Create a list with underlay and overlay images
     out_list = os.path.join(params.out_dir, 'list_images.csv')

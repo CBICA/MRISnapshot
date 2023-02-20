@@ -2,63 +2,47 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+from argparse import ArgumentParser, SUPPRESS
 import os
 import sys
 import pandas as pd
 from MRISnapshot import create_report_main as crm 
 
-## Set logger  ## FIXME to be updated
-import logging
-format='%(levelname)-8s [%(filename)s : %(lineno)d - %(funcName)20s()] %(message)s'
-format='%(levelname)-8s %(message)s'
-logging.basicConfig(level=logging.DEBUG, format = '\n' + format, datefmt='%Y-%m-%d:%H:%M:%S')
-logger = logging.getLogger(__name__)
-
-##logger.setLevel(logging.DEBUG)      ## While debugging
-logger.setLevel(logging.INFO)    ## FIXME Debug comments will be removed in release version
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-
-"""usage information"""
-descr = r"""
------ Description -----
-
-Generates QC report for MRI datasets. The QC report is an html file that contains 
-snapshots of underlay and overlay (optional) images for a set of subjects. The full
-path to input images should be given in a .csv list file. The underlay and overlay 
-columns are defined by the column labels. The user can define how many slices, which 
-view(s), what type of display (edge, transparent overlay) to display (see default 
-config file). 
-
------ Usage -----
-
-%s [OPTIONS]
-
-OPTIONS (All Required):
-[-r --run_dir     ] <path>     Reporting directory
-
------ Notes -----
-
-
------ Examples and tests -----
-
-Test images, lists, configurations and output mriqc reports are provided in ../test
-
------ Contact -----
-
-guray.erus\@uphs.upenn.edu
-
-"""
-
+import MRISnapshot.utils.mylogger as mylogger
+logger = mylogger.logger
 
 if __name__ == "__main__":
     
+    descr = 'Script to generate the QC report for an input image dataset.\n\n' \
+            'The output QC report is an html file that displays snapshots of underlay and overlay ' \
+            '(optional) images. \n\n' \
+            'Before running the script, users should create an output folder (OUTDIR), and create ' \
+            'two files in it: \n' \
+            '- list_images.csv: List of underlay (and optionally mask and overlay) image files. \n' \
+            '- config.csv: a configuration file that includes user parameters and their values.\n\n' \
+            'Users can use the script "snap_prep_data" to prepare these two files, and edit them ' \
+            'for their specific dataset and parameter selection.\n\n' \
+            'See scripts in: test/Scripts for examples.\n'
+
     ## Create parser
-    parser = argparse.ArgumentParser(
-        prog="MRISnapshot",
-        formatter_class = argparse.RawTextHelpFormatter,
-        description="Create a QC report of the dataset",
+    parser = argparse.ArgumentParser(add_help=False,
+                                     prog="snap_create_report",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,                              
+                                     description = descr,
+                                     epilog = 'Contact: guray.erus@pennmedicine.upenn.edu')
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    # Add back help 
+    optional.add_argument(
+        '-h',
+        '--help',
+        action = 'help',
+        default = SUPPRESS,
+        help = 'show this help message and exit'
     )
-    parser.add_argument("-d", dest="run_dir", type=str, help="Directory to create the QC report", required=True)
+
+    required.add_argument("-d", dest="outdir", type=str, required=True, help="Output directory")
 
     ## Parse input args
     args = parser.parse_args()
@@ -68,14 +52,14 @@ if __name__ == "__main__":
     logger.info('-----------------------------------------')    
 
     ## Derive args
-    run_dir = os.path.abspath(args.run_dir)    
-    list_file = os.path.join(run_dir, 'list_images.csv')
-    config_file = os.path.join(run_dir, 'config.csv')
-    out_dir = os.path.join(run_dir, 'QCReport')
+    outdir = os.path.abspath(args.outdir)    
+    list_file = os.path.join(outdir, 'list_images.csv')
+    config_file = os.path.join(outdir, 'config.csv')
+    report_dir = os.path.join(outdir, 'QCReport')
     
     ## Make out directory
-    if os.path.exists(out_dir) == False:
-        os.makedirs(out_dir)
+    if os.path.exists(report_dir) == False:
+        os.makedirs(report_dir)
 
     ## Create report
-    crm.create_report(list_file, config_file, out_dir)
+    crm.create_report(list_file, config_file, report_dir)
