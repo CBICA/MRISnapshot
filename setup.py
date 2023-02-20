@@ -28,7 +28,7 @@ setup(name='mri_snapshot',
         'matplotlib'
     ],
     scripts=[
-        'snap_prep_data', 'snap_create_report'
+        'mrisnapshot_prep_data', 'mrisnapshot_create_report'
     ],
     data_files=[('', glob('MRISnapshot/templates/*.js'))
     ],
