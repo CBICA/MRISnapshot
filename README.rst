@@ -1,7 +1,7 @@
 .. include:: links.rst
 
-MRISnapshot: A QC Tool for MRI Images and Derived Masks
-=======================================================
+MRISnapshot: Fast Visual QC for MRI Datasets
+============================================
 
 Full documentation at https://mrisnapshot.readthedocs.io
 
