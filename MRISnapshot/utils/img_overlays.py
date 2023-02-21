@@ -21,6 +21,7 @@ def overlayImage(img2d_under, img2d_over, transparency=0.6, is_edge=0):
     pil_under = Image.fromarray(np.uint8(cm.Greys_r(img2d_under, bytes=True)))
     pil_fused = Image.fromarray(np.uint8(cm.Greys_r(img2d_under, bytes=True)))
     
+    ## tmpData =  np.uint8(np.tile(np.expand_dims(img2d_over,3),(1,1,4))*255)    ## Old version
     tmpData =  np.uint8(np.tile(np.expand_dims(img2d_over,2),(1,1,4))*255)
     tmpData[:,:,[1,2]] = 0        # Set RED color
     pil_over = Image.fromarray(tmpData)
@@ -49,9 +50,11 @@ def overlayImageDouble(img2d_under, img2d_over1, img2d_over2, transparency=0.6, 
     pil_under = Image.fromarray(np.uint8(cm.Greys_r(img2d_under, bytes=True)))
     pil_fused = Image.fromarray(np.uint8(cm.Greys_r(img2d_under, bytes=True)))
     
+    ## tmpData1 =  np.uint8(np.tile(np.expand_dims(img2d_over1,3),(1,1,4))*255)    ## Old version
     tmpData1 =  np.uint8(np.tile(np.expand_dims(img2d_over1,2),(1,1,4))*255)
     tmpData1[:,:,[1,2]] = 0        # Set RED color
 
+    ## tmpData2 =  np.uint8(np.tile(np.expand_dims(img2d_over2,3),(1,1,4))*255)    ## Old version
     tmpData2 =  np.uint8(np.tile(np.expand_dims(img2d_over2,2),(1,1,4))*255)
     tmpData2[:,:,[0,2]] = 0        # Set GREEN color
 

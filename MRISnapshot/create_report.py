@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 ### Import modules
+import argparse
+from argparse import ArgumentParser, SUPPRESS
+
 import os, sys, time, shutil
 import getopt
 import numpy as np
@@ -171,24 +174,24 @@ def get_img_mat(nii, orient = 'LPS'):
         img_mat = nii.get_fdata()
     return img_mat
 
-def calc_sel_slices_tmp():
-    '''Select slices that will be used to create snapshots
-    '''
-    slices = [50, 70, 90, 110, 130, 150]      ## FIXME
-    return slices
+#def calc_sel_slices_tmp():
+    #'''Select slices that will be used to create snapshots
+    #'''
+    #slices = [50, 70, 90, 110, 130, 150]      ## FIXME
+    #return slices
 
 def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, sub_id):
     '''Select slices that will be used to create snapshots
        Slice selection algorithm:
-        - Detect eligible voxels:
-            - Mask image non-zero voxels if there is a mask
-            - Overlay image non-zero voxels if there is an overlay            
-            - Underlay image non-zero voxels otherwise
-        - Detect eligible slices
-            - Those where the number of non-zero voxels in a slice is larger than user threshold
-        - Select from them based on user parameters
-            - num_slices (n): Select n slices with equal step sizes
-            - step_size_slice (s): Select all slices with step size s
+       Detect eligible voxels:
+       Mask image non-zero voxels if there is a mask
+       Overlay image non-zero voxels if there is an overlay
+       Underlay image non-zero voxels otherwise
+       Detect eligible slices
+       Those where the number of non-zero voxels in a slice is larger than user threshold
+       Select from them based on user parameters
+       num_slices (n): Select n slices with equal step sizes
+       step_size_slice (s): Select all slices with step size s
     '''
     ## Create non-zero mask
     if img_mask is not None:
@@ -623,7 +626,7 @@ def create_report(list_file, config_file, out_dir):
 
     ## Get the path for utils
     path_root = os.path.abspath(os.path.dirname(__file__))
-    path_templates = os.path.join(path_root, 'templates')
+    path_templates = os.path.join(path_root, 'js_templates')
 
     ### Check output file
     out_report = os.path.join(out_dir, 'qcreport.html')
@@ -684,5 +687,58 @@ def create_report(list_file, config_file, out_dir):
     create_html_report(params, out_dir, dir_subjects_full, dir_snapshots, 
                        dir_snapshots_full, dir_subjects, img_info_all, out_report)
     
+#if __name__ == "__main__":
+def main():
+    
+    descr = 'Script to generate the QC report for an input image dataset.\n\n' \
+            'The output QC report is an html file that displays snapshots of underlay and overlay ' \
+            '(optional) images. \n\n' \
+            'Before running the script, users should create an output folder (OUTDIR), and create ' \
+            'two files in it: \n' \
+            '- list_images.csv: List of underlay (and optionally mask and overlay) image files. \n' \
+            '- config.csv: a configuration file that includes user parameters and their values.\n\n' \
+            'Users can use the script "snap_prep_data" to prepare these two files, and edit them ' \
+            'for their specific dataset and parameter selection.\n\n' \
+            'See scripts in: test/Scripts for examples.\n'
+
+    ## Create parser
+    parser = argparse.ArgumentParser(add_help=False,
+                                     prog="mrisnap_create_report",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,                              
+                                     description = descr,
+                                     epilog = 'Contact: guray.erus@pennmedicine.upenn.edu')
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    # Add back help 
+    optional.add_argument(
+        '-h',
+        '--help',
+        action = 'help',
+        default = SUPPRESS,
+        help = 'show this help message and exit'
+    )
+
+    required.add_argument("-d", dest="outdir", type=str, required=True, help="Output directory")
+
+    ## Parse input args
+    args = parser.parse_args()
+    
+    logger.info('-----------------------------------------')    
+    logger.info('Running : ' + ' '.join(sys.argv))    
+    logger.info('-----------------------------------------')    
+
+    ## Derive args
+    outdir = os.path.abspath(args.outdir)    
+    list_file = os.path.join(outdir, 'list_images.csv')
+    config_file = os.path.join(outdir, 'config.csv')
+    report_dir = os.path.join(outdir, 'QCReport')
+    
+    ## Make out directory
+    if os.path.exists(report_dir) == False:
+        os.makedirs(report_dir)
+
+    ## Create report
+    create_report(list_file, config_file, report_dir)
     
     

@@ -1,7 +1,0 @@
-https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
-
-https://stackoverflow.com/questions/2701998/sphinx-autodoc-is-not-automatic-enough
-
-https://sphinx-rtd-tutorial.readthedocs.io/en/latest/sphinx-config.html
-
-https://packaging.python.org/en/latest/tutorials/creating-documentation/

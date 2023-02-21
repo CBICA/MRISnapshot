@@ -9,7 +9,7 @@ from glob import glob
 #long_description = (this_directory / 'README.md').read_text()
 long_description = 'TODO'
 
-setup(name='mri_snapshot',
+setup(name='mrisnapshot',
     version='0.0.1-dev',
     description='QC tool for verification of datasets with MRI images and derived maps',
     long_description=long_description,
@@ -27,10 +27,14 @@ setup(name='mri_snapshot',
         'scipy',
         'matplotlib'
     ],
-    scripts=[
-        'mrisnapshot_prep_data', 'mrisnapshot_create_report'
-    ],
-    data_files=[('', glob('MRISnapshot/templates/*.js'))
+    entry_points={
+        'console_scripts': [
+            'mrisnapshot_prep_data = MRISnapshot.prep_data:main',
+            'mrisnapshot_create_report = MRISnapshot.create_report:main',
+        ]        
+    },    
+    data_files=[
+        ('', glob('MRISnapshot/js_templates/*.js'))
     ],
     classifiers=[
         'Intended Audience :: Science/Research',

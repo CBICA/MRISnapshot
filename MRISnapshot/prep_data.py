@@ -1,12 +1,25 @@
 #!/usr/bin/env python
+import argparse
+from argparse import ArgumentParser, SUPPRESS
 import numpy as np
 import pandas as pd
 import glob
 import os
+import sys
 
 import MRISnapshot.utils.mylogger as mylogger
+logger = mylogger.logger
 
 def add_img_names(df, in_dir, suffix, col_name):
+    """Adds image names.
+
+    :df: A dataframe
+    :in_dir: Input directory
+    :suffix: The suffix
+    :col_name: The column name
+    :return: A dataframe
+    :rtype: A dataframe
+    """
     if suffix != None:
         list_img = glob.glob(in_dir + os.sep + '**' + os.sep + '*' + suffix, recursive = True)
         df_new = pd.DataFrame(data = list_img, columns = [col_name])
@@ -84,6 +97,71 @@ def prep_dataset(params):
         df_config.to_csv(out_config, index=False)
         logger.info('  Created config file: ' + out_config)
     
+def main():
+    """Helper script to prepare input files required for QC report creation.
+    After running this script, the user can manually edit the files 
+    created in the output folder (OUTDIR), and run the command 
+    ``mrisnap_create_report OUTDIR`` to create the QC report for their 
+    dataset and selected configuration
+
+    :param indir: Input image directory (full or relative path)
+    :type indir: string
+
+    :param s_ulay: Suffix of underlay images
+    :type indir: string
+    
+    :param outdir: Input image directory (full or relative path)
+    :type indir: string
+
+    """
+
+    descr = 'Helper script to prepare input files (image list and configuration file) ' \
+            'required for QC report creation. ' \
+            'After running this script, the user can manually edit the files created in ' \
+            'OUTDIR, and run the command ' \
+            '"snap_create_report [OUTDIR]" to create the QC report for their dataset ' \
+            'and selected configuration.\n\n' \
+            'See scripts in: test/Scripts for examples.\n\n'
+
+    ## Create parser
+    parser = argparse.ArgumentParser(add_help=False,
+                                     prog="mrisnap_prep_data",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description = descr,
+                                     epilog = 'Contact: guray.erus@pennmedicine.upenn.edu')
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    # Add back help 
+    optional.add_argument(
+        '-h',
+        '--help',
+        action = 'help',
+        default = SUPPRESS,
+        help = 'show this help message and exit'
+    )
+    
+    required.add_argument("-i", dest="indir", type=str, required=True, help="Input image directory")
+    required.add_argument("-s", dest="s_ulay", type=str, required=True, help="Suffix of underlay images")
+    required.add_argument("-d", dest="outdir", type=str, required=True, help="Output directory")
+    optional.add_argument("--mask", dest="s_mask", type=str, help = "Suffix of mask images")
+    optional.add_argument("--olay", dest="s_olay", type=str, help = "Suffix of overlay images")
+    optional.add_argument("--olay2", dest="s_olay2", type=str, help="Suffix of second overlay images")
+
+    # Parse input params
+    params = parser.parse_args()
+
+    logger.info('-----------------------------------------')    
+    logger.info('Running : ' + ' '.join(sys.argv))
+    logger.info('-----------------------------------------')    
+
+    ## Update params
+    params.in_dir = os.path.abspath(params.indir)
+    params.out_dir = os.path.abspath(params.outdir)
+    
+    ## Prepare data
+    logger.info('  Preparing image list and configuration file ...')
+    prep_dataset(params)
     
     
     
