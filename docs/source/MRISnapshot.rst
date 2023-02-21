@@ -12,18 +12,18 @@ Subpackages
 Submodules
 ----------
 
-MRISnapshot.create\_report\_main module
----------------------------------------
+MRISnapshot.create\_report module
+---------------------------------
 
-.. automodule:: MRISnapshot.create_report_main
+.. automodule:: MRISnapshot.create_report
    :members:
    :undoc-members:
    :show-inheritance:
 
-MRISnapshot.prep\_dataset\_main module
---------------------------------------
+MRISnapshot.prep\_data module
+-----------------------------
 
-.. automodule:: MRISnapshot.prep_dataset_main
+.. automodule:: MRISnapshot.prep_data
    :members:
    :undoc-members:
    :show-inheritance:

@@ -689,6 +689,28 @@ def create_report(list_file, config_file, out_dir):
     
 #if __name__ == "__main__":
 def main():
+    """Script to generate the QC report for an input image dataset.
+    The output QC report is an html file that displays snapshots of 
+    underlay and overlay (optional) images. 
+    
+    Before running the script, users should create an output folder 
+    (OUTDIR), and create two files in it: 
+    
+    list_images.csv: List of underlay (and optionally mask and 
+    overlay) image files.
+    config.csv: a configuration file that includes user parameters 
+    and their values.
+
+    Users can use the script "snap_prep_data" to prepare these 
+    two files, and edit them for their specific dataset and parameter 
+    selection.
+    
+    See scripts in: test/Scripts for examples
+
+    :param outdir: Output report directory (full or relative path)
+    :type indir: string
+
+    """
     
     descr = 'Script to generate the QC report for an input image dataset.\n\n' \
             'The output QC report is an html file that displays snapshots of underlay and overlay ' \

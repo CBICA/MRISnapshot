@@ -36,7 +36,8 @@ release = '0.1'
 # extensions = ["myst_parser"]
 extensions = [
     'sphinx.ext.doctest',
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinx_tabs.tabs'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
