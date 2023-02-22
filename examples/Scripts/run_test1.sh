@@ -1,7 +1,5 @@
 #! /bin/bash
-
 indir=`pwd`/../Input/Scans
-indir='/home/guraylab/AIBIL/Projects/MRISnapshot/Pipelines/20230215_PrepTestData/Test'
 outdir=`pwd`/../Output/Test1
 
 # Make out dir
@@ -12,7 +10,7 @@ cmd="mrisnapshot_prep_data -i $indir -s _T1_DS.nii.gz -d $outdir --mask _T1_ICVM
 --olay2 _T1_BRAINMASK.nii.gz"
 $cmd
 
-# Run MRISnaphot report
+# Run MRISnaphot QC report creation
 cmd="mrisnapshot_create_report -d $outdir"
 $cmd
 

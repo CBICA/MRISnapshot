@@ -1,5 +1,5 @@
-API
-===
+MRISnapshot
+===========
 
 .. toctree::
    :maxdepth: 4

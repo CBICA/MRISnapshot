@@ -50,8 +50,7 @@ coverage.xml
 docs/_build/
 
 # test outputs or tmp
-Tests/Output
-Tests/tmp*
+examples/Output
 Tmp
 
 .*
