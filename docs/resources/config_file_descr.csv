@@ -1,0 +1,26 @@
+ParamName,Default Values,Type,Values,Description
+id_col,ScanID,Text,ScanID,Name of the id column in image list
+ulay_col,UnderlayImg,Text,Any,Name of the underlay image column in image list
+mask_col,MaskImg,Text,Any,Name of the mask image column in image list
+olay_col,OverlayImg,Text,Any,Name of the overlay image column in image list
+olay_col2,OverlayImg2,Text,Any,Name of the second overlay image column in image list
+sel_vals_olay,,Int[+Int],Any label value in overlay image,Values to select from overlay image
+sel_vals_olay2,,Int[+Int],Any label value in second overlay image,Values to select from second overlay image
+view_plane,A+S+C,Char[+Char],"{A, S, C, A+S, … , A+S+C}",View plane to extract the snapshot
+num_slice,5,Int,Any positive value,Number of slices selected from each view
+step_size_slice,,Int,Any positive value,Step size between selected slices
+min_vox,1,Int,Any positive value,Minimum number of foreground voxels in a slice to be eligible for selection
+crop_to_mask,0,Bool,"{0,1}",Is the snapshot cropped to the mask?
+crop_to_olay,0,Bool,"{0,1}",Is the snapshot cropped to the overlay?
+padding_ratio,0,Float,[0 to 1],Ratio of additional padding if the snapshot is cropped
+bin_olay,0,Bool,"{0,1}",Binarize the overlay image?
+is_edge,1,Bool,"{0,1}",Detect edges on the overlay image?
+alpha_olay,1,Float,[0 to 1],Alpha (transparency) value of the overlay
+perc_low,0,Int,[0 to 49],Lower intensity value for scaling the contrast of the underlay image
+perc_high,100,Int,[51 to 100],Upper intensity value for scaling the contrast of the underlay image
+is_out_single,0,Bool,"{0,1}",Create a single html QC report for all subjects?
+is_out_noqc,0,Bool,"{0,1}",Create an html QC report without the QC form?
+img_width,300,Int,Any positive value,Width of each snapshot
+label_checkbox1,PASS,Text,Any,Label of the first check box in QC form
+label_checkbox2,FAIL,Text,Any,Label of the second check box in QC form
+label_editbox,Notes,Text,Any,Label of the edit box in QC form

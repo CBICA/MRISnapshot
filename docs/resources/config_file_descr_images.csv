@@ -1,0 +1,6 @@
+ParamName,Default Values,Type,Values,Description
+id_col,ScanID,Text,ScanID,Name of the id column in image list
+ulay_col,UnderlayImg,Text,Any,Name of the underlay image column in image list
+mask_col,MaskImg,Text,Any,Name of the mask image column in image list
+olay_col,OverlayImg,Text,Any,Name of the overlay image column in image list
+olay_col2,OverlayImg2,Text,Any,Name of the second overlay image column in image list

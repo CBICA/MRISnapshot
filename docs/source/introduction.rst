@@ -12,7 +12,7 @@ About
 
 ``MRISnapshot`` provides a set of configuration parameters to allow users to customize the contents of the report for different needs and use cases.
 
-.. figure:: ../images/qcreport_example.png
+.. figure:: ../resources/qcreport_example.png
    
    Example QC Report that shows ICV and Brainmask overlays on T1 scans in axial, sagittal and coronal views
 
