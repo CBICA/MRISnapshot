@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 .. include:: ./links.rst
-.. include:: ../../README.rst
+.. include:: ./introduction.rst
    
 .. toctree::
     :maxdepth: 2
@@ -14,11 +14,4 @@
     quickstart
     usage
     modules
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 

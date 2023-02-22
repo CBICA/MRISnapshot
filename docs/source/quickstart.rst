@@ -2,11 +2,15 @@
 Quickstart
 **********
 
-MRISnaphot has two scripts to create a QC report:  
+The typical use case for ``MRISnaphot`` is to assist QC of a dataset with raw and processed MRI images. Manual QC, i.e. by viewing 3D images and/or overlaid derived masks, may be time consuming for large datasets. ``MRISnaphot`` allows users to create snapshots of selected underlay and overlay images in a configurable way.
 
-.. tabs::
+QC report creation involves 2 steps:
 
-   .. code-tab:: shell Bash (Linux and macOS)
+* Creating an input list of images and configuration file with parameters
 
-    mrisnapshot_prep_data
-    mrisnapshot_create_report
+* Applying the report creation script
+
+.. code-block:: console
+
+    (.venv) $ mrisnapshot_prep_data
+    (.venv) $ mrisnapshot_create_report
