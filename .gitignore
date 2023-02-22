@@ -49,9 +49,10 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
-# test outputs
+# test outputs or tmp
 Tests/Output
 Tests/tmp*
+Tmp
 
 .*
 __pycache__
