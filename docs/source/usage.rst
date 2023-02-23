@@ -13,7 +13,7 @@ Data preparation involves creation of two files in an empty directory that will 
 * **config.csv**: a list of configuration parameters and their values
 
 .. warning::
-    The names of the two data files are constant and should not be modified.
+    The names of these two files are constant and should not be modified.
 
 The helper script: 
 
@@ -31,7 +31,7 @@ is provided for data preparation.
 
     **1.B. Unstructured data (input images with non-unified paths and/or naming formats)**
 
-    Target images are located in different directories without a common parent folder, and/or image names are not consistent. A typical example is initial raw scans extracted from dicoms.
+    Target images are located in different directories without a common parent folder, and/or image names are not consistent. A typical example is the QC of initial raw scans extracted from dicoms.
     
     Users can still run the helper script for initialization. However, they will need to edit the image list, or create a new  image list with the full path and name of all input images.
 
@@ -46,7 +46,7 @@ User parameters for configuring the QC report are listed in the **config.csv** f
 
 **3. Creation of the QC report**
 
-Run the report creation script with the output folder created in previous steps as the single input argument.
+Run the report creation script, providing as input the name of the folder with data files. The QC report will be created in the same folder.
 
 .. code-block:: console
 

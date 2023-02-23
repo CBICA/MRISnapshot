@@ -46,7 +46,7 @@ After installation, users can quickly run a small example:
 6. Save the QC annotations using the **SAVE REPORT** button.
 
 .. note::
-    Depending on the browser type and configuration, the path and naming of the output *.csv* file may show differences. Foe example, the output file may be directly saved to a default download folder.
+    Depending on the browser type and configuration, the path and naming of the output *.csv* file may show differences. For example, the output file may be directly saved to a default download folder.
 
 
 

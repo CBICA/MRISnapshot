@@ -2,7 +2,7 @@
 Installation
 ************
 
-MRISnapshot can be installed using `pip`. We suggest that users install the package in a Python3 virtual environment. Installation steps are:
+MRISnapshot can be installed using `pip`. We suggest that users install the package in a Python3 virtual environment (or alternatively in a Conda environment). Installation steps are:
 
 1. Clone the project.
 
