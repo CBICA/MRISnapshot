@@ -36,19 +36,27 @@ is provided for data preparation.
     Users can still run the helper script for initialization. However, they will need to edit the image list, or create a new  image list with the full path and name of all input images.
 
     .. warning::
-        Image list file should always include a first column named as "ID". This field is used as an identifier for the participant or the scan session.
+        Image list file should include a first column named as *"ScanID"*. This field is used as an identifier for the participant or the scan session.
         
-        Other columns in the image list are "UnderlayImg", "MaskImg", "OverlayImg" and "OverlayImg2". We suggest to keep these column names. However, this is not a requirement. If a column name is modified, users should edit the related field in the configuration file.
+    .. note::
+        Other columns in the image list are *"UnderlayImg"*, *"MaskImg"*, *"OverlayImg"* and *"OverlayImg2"*. Users can use names other than these default ones (e.g. *T1* instead of *ulay_col*). If they do so, they should edit the configuration file to make sure that the column name matches the related field in the configuration file.
     
 **2. Selection of QC report configuration parameters**
 
-User parameters for configuring the QC report are listed in the **config.csv** file. The helper script creates a configuration file with default values. Users can edit the values in this file to customize the QC report creation for the specific task. See :ref:`ref_config` for a detailed list of all parameters.
+User parameters for configuring the QC report are listed in the **config.csv** file. The helper script creates a configuration file with default values. Users can edit the values in this file to customize the QC report creation for the specific task. See :ref:`ref_config` for explanations, and detailed lists of all parameters.
 
 **3. Creation of the QC report**
 
-Run the report creation script, providing as input the name of the folder with data files. The QC report will be created in the same folder.
+Run the report creation script, providing as input the name of the folder with data files created in previous steps. The QC report will be created in the same folder.
 
 .. code-block:: console
 
     mrisnap_create_report [-h] -d OUTDIR
+
+The QC report can be viewed using the command:
+
+.. code-block:: console
+
+    google-chrome {output_directory}/QCReport/qcreport.html
+
 

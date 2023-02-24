@@ -14,5 +14,5 @@ About
 
 .. figure:: ../resources/qcreport_example.png
    
-   Example QC Report that shows ICV and Brainmask overlays on T1 scans in axial, sagittal and coronal views
+   Example QC Report that shows ICV and Brainmask overlays on T1-weighted scan in axial, sagittal and coronal views
 

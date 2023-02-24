@@ -1,6 +1,6 @@
 ParamName,Default Values,Type,Values,Description
-bin_olay,0,Bool,"{0,1}",Binarize the overlay image?
-is_edge,1,Bool,"{0,1}",Detect edges on the overlay image?
+bin_olay,0,Bool,[0 or 1],Binarize the overlay image?
+is_edge,1,Bool,[0 or 1],Detect edges on the overlay image?
 alpha_olay,1,Float,[0 to 1],Alpha (transparency) value of the overlay
 perc_low,0,Int,[0 to 49],Lower intensity value for scaling the contrast of the underlay image
 perc_high,100,Int,[51 to 100],Upper intensity value for scaling the contrast of the underlay image
