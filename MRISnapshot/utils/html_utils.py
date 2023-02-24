@@ -38,7 +38,8 @@ def htmlSubjectPrefix(sub_id, sub_no, sub_count, fname_under, fname_over, fname_
 <hr><br>
 <center><h3>SUBJECT: ''' + str(sub_no) + ' / ' + str(sub_count) + ''', ID: <label id="SUBJ_ID" name="SUBJ_ID">
 ''' + sub_id + '''</label></h3></center><br>
-View cmd:<br> fsleyes ''' + fname_under + ''' ''' + fname_over +  ''' ''' + fname_over2 + '''<br>
+<h3>View cmd:</h3> 
+fsleyes ''' + fname_under + ''' ''' + fname_over +  ''' ''' + fname_over2 + '''<br>
 '''
 
     return TEXT_HTML_STR

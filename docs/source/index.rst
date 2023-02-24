@@ -13,5 +13,6 @@
     installation
     quickstart
     usage
+    configuration
     modules
 

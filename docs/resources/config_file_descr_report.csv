@@ -1,0 +1,7 @@
+ParamName,Default Values,Type,Values,Description
+is_out_single,0,Bool,[0 or 1],Create a single html QC report for all subjects?
+is_out_noqc,0,Bool,[0 or 1],Create an html QC report without the QC form?
+img_width,300,Int,Any positive value,Width of each snapshot
+label_checkbox1,PASS,Text,Any text,Label of the first check box in QC form
+label_checkbox2,FAIL,Text,Any text,Label of the second check box in QC form
+label_editbox,Notes,Text,Any text,Label of the edit box in QC form
