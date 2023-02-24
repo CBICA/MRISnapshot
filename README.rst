@@ -2,7 +2,7 @@
 MRISnapshot: Fast Visual QC of MRI Datasets
 ===========================================
 
-Full documentation:  **https://mrisnapshot.readthedocs.io**
+Full documentation:  **https://cbica.github.io/MRISnapshot/**
 
 About
 -----
