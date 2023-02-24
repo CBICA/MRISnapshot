@@ -27,6 +27,7 @@ jobs:
           retention-days: 90
   
   deploy-docs:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs: build-docs
     
     permissions:
@@ -45,6 +46,5 @@ jobs:
     steps:
      - name: Deploy artifact to GitHub Pages
        id: deployment
-       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
        uses: actions/deploy-pages@v1
          
