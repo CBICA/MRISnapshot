@@ -11,15 +11,17 @@ import MRISnapshot.utils.mylogger as mylogger
 logger = mylogger.logger
 
 def add_img_names(df, in_dir, suffix, col_name):
-    """Adds image names.
-
-    :df: A dataframe
-    :in_dir: Input directory
-    :suffix: The suffix
-    :col_name: The column name
-    :return: A dataframe
-    :rtype: A dataframe
+    """Finds in the input directory images with a specific suffix  
+    (recursively, including nested folders), and adds them to the 
+    input dataframe as a new column.
+    
+    :param df: Input dataframe that keeps the image names
+    :param in_dir: Input directory
+    :param suffix: Image suffix
+    :param col_name: Column name
+    :return: Output dataframe
     """
+
     if suffix != None:
         list_img = glob.glob(in_dir + os.sep + '**' + os.sep + '*' + suffix, recursive = True)
         df_new = pd.DataFrame(data = list_img, columns = [col_name])
@@ -29,8 +31,15 @@ def add_img_names(df, in_dir, suffix, col_name):
     return df
 
 def prep_dataset(params):
-    '''Create image list and copy default configuration file
-    '''
+    """Function to prepare input files required for QC report creation. 
+    Creates two output files in the output directory: 
+    
+    * list_images.csv: a list with full names of all input image files,
+    
+    * config.csv: a list of all configuration parameters and their default values.
+
+    :param params: Input parameters
+    """
     logger = mylogger.logger
 
     ## Create a list with underlay and overlay images
@@ -99,20 +108,13 @@ def prep_dataset(params):
     
 def main():
     """Helper script to prepare input files required for QC report creation.
-    After running this script, the user can manually edit the files 
-    created in the output folder (OUTDIR), and run the command 
-    ``mrisnap_create_report OUTDIR`` to create the QC report for their 
-    dataset and selected configuration
 
-    :param indir: Input image directory (full or relative path)
-    :type indir: string
-
-    :param s_ulay: Suffix of underlay images
-    :type indir: string
-    
-    :param outdir: Input image directory (full or relative path)
-    :type indir: string
-
+    :param indir: Input image directory (full or relative path) (required)
+    :param s_ulay: Suffix of underlay images (required)
+    :param outdir: Input image directory (full or relative path) (required)
+    :param s_mask: Suffix of mask images (optional)
+    :param s_olay: Suffix of underlay images (optional)
+    :param s_olay2: Suffix of underlay images (optional)
     """
 
     descr = 'Helper script to prepare input files (image list and configuration file) ' \

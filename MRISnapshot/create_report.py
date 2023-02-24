@@ -24,6 +24,11 @@ logger = mylogger.logger
 
 def parse_config(df_conf, list_col_names):
     '''Read config list and check params
+
+    :param df_conf: Dataframe with the list of configuration parameters
+    :param list_col_names: List of column names in image list
+
+    :return params: List of all input parameters
     '''
         
     #### Check integrity of the config dataframe
@@ -113,6 +118,8 @@ def parse_config(df_conf, list_col_names):
 
 def create_dir(dir_name):
     '''Create output directories
+
+    :param dir_name: Output folder
     '''
     try:        
         if not os.path.exists(dir_name):
@@ -123,13 +130,21 @@ def create_dir(dir_name):
 def create_log_files(outdir):
     '''Create log files
     '''
+    
     #logFile = outdir + os.sep + 'log_' + EXEC_NAME + '_' + startTimePretty + '.stdout'
     #errFile = outdir + os.sep + 'log_' + EXEC_NAME + '_' + startTimePretty + '.stderr'
     writeLog(logFile, '''------------------------''')
 
 def copy_edited_js(path_utils, out_dir, report_hdr_txt):
-    '''Copy js scripts
+    '''Copy js scripts to QC report folder, while adding hdr text.
+    This function was required to modify QC form columns in js
+    template file dynamically based on user input.
+    
+    :param path_utils: Path to js template files
+    :param out_dir: Output folder
+    :param report_hdr_txt: Header text to add to the js file
     '''
+    
     fin = os.path.join(path_utils, 'save_qcform.js')
     fout = os.path.join(out_dir, 'save_qcform.js')
     new_text = 'textHdr = "' + report_hdr_txt + '"\n'
@@ -137,15 +152,29 @@ def copy_edited_js(path_utils, out_dir, report_hdr_txt):
     open(fout, 'w').write(new_text + open(fin).read())
 
 def copy_js(path_utils, out_dir):
-    '''Copy js scripts
+    '''Copy js scripts to QC report folder
+    
+    :param path_utils: Path to js template files
+    :param out_dir: Output folder
     '''
+
     shutil.copy(os.path.join(path_utils, 'misc_func.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'shortcut.js'), out_dir)
     shutil.copy(os.path.join(path_utils, 'load_back.js'), out_dir)
 
 def get_nifti(df_images, sub_index, col_name, orient = 'LPS'):
-    ''' Read nifti image in image list and reorient 
+    ''' Read image names from a dataframe, read nifti images and 
+    reorient them"
+    
+    :param df_images: Input dataframe with image names
+    :param sub_index: Index of the current subject
+    :param col_name: Dataframe column (with image name to extract)
+    :param orient: Desired image orientation
+    
+    :return nii: Output nifti image
+    :return img_mat: Image file name
     '''
+
     fname = ''
     nii = None
     if col_name in df_images:
@@ -160,7 +189,13 @@ def get_nifti(df_images, sub_index, col_name, orient = 'LPS'):
 
 def get_img_mat(nii, orient = 'LPS'):
     ''' Reorient nifti and get data matrix
+    
+    :param nii: Input image
+    :param orient: Desired image orientation
+    
+    :return img_mat: Image voxels in a numpy matrix    
     '''
+    
     img_mat = None
     if nii != None:
         orig_ornt = nib.io_orientation(nii.affine)
@@ -179,16 +214,16 @@ def get_img_mat(nii, orient = 'LPS'):
 
 def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, sub_id):
     '''Select slices that will be used to create snapshots
-       Slice selection algorithm:
-       Detect eligible voxels:
-       Mask image non-zero voxels if there is a mask
-       Overlay image non-zero voxels if there is an overlay
-       Underlay image non-zero voxels otherwise
-       Detect eligible slices
-       Those where the number of non-zero voxels in a slice is larger than user threshold
-       Select from them based on user parameters
-       num_slices (n): Select n slices with equal step sizes
-       step_size_slice (s): Select all slices with step size s
+    
+    :param img_ulay: Underlay image
+    :param img_mask: Mask image
+    :param img_olay: Overlay image
+    :param img_olay2: Second overlay image
+    :param params: Input parameters
+    :param sub_index: Index of the subject
+    :param sub_id: Id of the subject
+    
+    :return ind_sel: A list of indices for selected slices
     '''
     ## Create non-zero mask
     if img_mask is not None:
@@ -221,11 +256,21 @@ def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, 
         if sl_sel.shape[0] < params.num_slice:
             sl_sel = np.unique(np.round(np.linspace(0, num_nz-1, params.num_slice)))
 
-    return ind_nz[sl_sel.astype(int)]
+    ind_sel = ind_nz[sl_sel.astype(int)]
+    return ind_sel
 
 def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
-    '''Change contrast of the image using percentile values
+    '''Change contrast of the image using percentile values. Image intensities 
+    will be mapped to values calculated from the min and max percentiles.
+    
+    :param nii_img: Input nifti image
+    :param nii_mask: Input nifti mask
+    :param perc_low: Lower percentile value to determine new min intensity value
+    :param perc_high: Higher percentile value to determine new max intensity value
+    
+    :return nii_out: Output nifti image
     '''
+    
     img = nii_img.get_fdata()
     mask = img > 0
     if nii_mask != None:
@@ -242,6 +287,22 @@ def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
 
 def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slice, slice_index, 
                      sub_id, dir_snapshots_full, list_sel_slices):
+    ''' Extracts an image snapshot based on input parameters, and writes it to 
+    output folder. Returns the name and caption of the extracted snapshot.
+    
+    :param img_ulay: Underlay image
+    :param img_olay: Overlay image
+    :param img_olay2: Second overlay image
+    :param curr_view: View plane to extract the snapshot
+    :param curr_slice: Slice number to extract the snapshot
+    :param slice_index: Index of the extracted slice
+    :param sub_id: Id of the current subject
+    :param dir_snapshots_full: Output directory for snapshots (full path)
+    :param list_sel_slices: List of selected slices
+
+    :return snapshot_caption: Caption of the extracted snapshot
+    :return snapshot_name: Name of the extracted snapshot
+    '''
     
     # Get underlay slice
     img2d_ulay = img_ulay[:,:,curr_slice].astype(float)
@@ -283,8 +344,15 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     return [snapshot_caption, snapshot_name]
 
 def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
-    ''' Crops a set of nifti images to the bounding box of the mask
+    ''' Crops a set of nifti images to the bounding box of the mask. Images are also
+    padded in each direction by the padding ratio
+    
+    :param nii_mask: Input nifti mask  image
+    :param nii_arr: An array of input nifti images
+    :param padding_ratio: Padding ratio
+    :return out_arr: An array of output nifti images
     '''
+    
     
     ## Min size in each dimension for the cropped image
     CROP_MIN_SIZE = 30
@@ -351,7 +419,11 @@ def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
 
 
 def resize_nifti(nii_arr, interp_order):
-    '''Resize to 1x1x1 mm with size max_size x max_size x max_size
+    '''Resize image to 1x1x1 mm with size max_size x max_size x max_size
+    
+    :param nii_arr: An array of input nifti images
+    :param interp_order: Order of interpolation
+    :return out_arr: An array of output nifti images
     '''
 
     nii_vox_size = np.array(nii_arr[0].header.get_zooms())[0:3]
@@ -375,7 +447,11 @@ def resize_nifti(nii_arr, interp_order):
 
 
 def sel_vals_nifti(in_nii, sel_vals):
-    '''Select a set of values from the input image
+    '''Selects a set of values from the input image, and resets all other values to 0
+    
+    :param in_nii: Input nifti image
+    :param sel_vals: List of selected values
+    :return out_nii: Output nifti image
     '''
     
     ## Read img data
@@ -392,8 +468,13 @@ def sel_vals_nifti(in_nii, sel_vals):
     return out_nii
 
 def create_snapshots(params, df_images, dir_snapshots_full):
-    '''Create snapshots and meta data about them
+    '''Creates image snapshots and meta-data about snapshots
+    
+    :param params: Input parameters
+    :param df_images: Dataframe with image names
+    :param dir_snapshots_full: Output directory for snapshots (full path)
     '''
+    
     
     # Dictionary with img orientation for different views
     d_orient = {'A':'PLS', 'S':'IPR', 'C':'IRP'}  
@@ -487,13 +568,17 @@ def create_snapshots(params, df_images, dir_snapshots_full):
 
 def create_html_report(params, out_dir, dir_subjects_full, dir_snapshots, dir_snapshots_full, dir_subjects, 
 img_info_all, out_report):
-    ###################################################################
-    ### CREATE HTML REPORTS ###########################################
-
-    ### Create html files for: 
-    ###        - single snapshots with/without overlay for each selected slice, 
-    ###        - all snapshots from a subject together
-    ###        - all subjects together
+    '''Function to create html report from pre-saved image snapshots and meta-data.
+    
+    :param params: All parameters
+    :param out_dir: Output directory
+    :param dir_subjects_full: Output directory for subjects (full path)
+    :param dir_snapshots: Output directory for snapshots
+    :param dir_snapshots_full: Output directory for snapshots (full path)
+    :param dir_subjects: Output directory for subjects
+    :param img_info_all: Meta data about snapshots
+    :param out_report: Output report file name
+    '''
 
     ## Write the stylesheet
     HTML_stylesheet = html.html_stylesheet(params.img_width);
@@ -618,6 +703,17 @@ img_info_all, out_report):
 
 
 def create_report(list_file, config_file, out_dir):
+    """Function to create the QC report
+    
+    
+    inds in the input directory images with a specific suffix  
+    (recursively, including nested folders), and adds them to the 
+    input dataframe as a new column.
+    
+    :param list_file: Image list file
+    :param config_file: Configuration file
+    :param out_dir: Output directory
+    """
 
     ## Get the path for utils
     path_root = os.path.abspath(os.path.dirname(__file__))
@@ -685,26 +781,8 @@ def create_report(list_file, config_file, out_dir):
 #if __name__ == "__main__":
 def main():
     """Script to generate the QC report for an input image dataset.
-    The output QC report is an html file that displays snapshots of 
-    underlay and overlay (optional) images. 
-    
-    Before running the script, users should create an output folder 
-    (OUTDIR), and create two files in it: 
-    
-    list_images.csv: List of underlay (and optionally mask and 
-    overlay) image files.
-    config.csv: a configuration file that includes user parameters 
-    and their values.
-
-    Users can use the script "snap_prep_data" to prepare these 
-    two files, and edit them for their specific dataset and parameter 
-    selection.
-    
-    See scripts in: test/Scripts for examples
 
     :param outdir: Output report directory (full or relative path)
-    :type indir: string
-
     """
     
     descr = 'Script to generate the QC report for an input image dataset.\n\n' \
