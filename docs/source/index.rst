@@ -13,5 +13,6 @@
     quickstart
     usage
     configuration
+    config_templates
     modules
 

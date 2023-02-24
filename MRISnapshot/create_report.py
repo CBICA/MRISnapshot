@@ -94,9 +94,6 @@ def parse_config(df_conf, list_col_names):
     params.sel_vals_olay = [int(n) for n in params.sel_vals_olay.split('+') if n != '']
     params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.split('+') if n != '']
 
-    #logger.info(params)
-    #input('p')
-
     ### Convert numeric args from str to int or float
     for tmp_arg in ['num_slice', 'step_size_slice', 'min_vox', 'crop_to_mask', 'crop_to_olay', 'bin_olay', 
                     'is_edge', 'is_out_single', 'is_out_noqc', 'img_width']:
@@ -208,8 +205,6 @@ def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, 
     ind_nz = np.where(np.sum(nz_mask, axis = (0, 1)) >= params.min_vox)[0]
     num_nz = ind_nz.size
     
-    logger.info(ind_nz)
-
     sl_sel = ind_nz
     if num_nz <= 1:       ## 0 or 1 slice to select
         return sl_sel
@@ -225,10 +220,6 @@ def calc_sel_slices(img_ulay, img_mask, img_olay, img_olay2, params, sub_index, 
         sl_sel = np.unique(np.round(np.linspace(hstep, num_nz-1-hstep, params.num_slice)))
         if sl_sel.shape[0] < params.num_slice:
             sl_sel = np.unique(np.round(np.linspace(0, num_nz-1, params.num_slice)))
-
-    logger.info(sl_sel)
-    logger.info(ind_nz)
-    #input()
 
     return ind_nz[sl_sel.astype(int)]
 
@@ -323,7 +314,7 @@ def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
 
         b_coors[i, 0] = int(b_min)
         b_coors[i, 1] = int(b_max)
-        b_sizes[i] = (b_max - b_min) * nii_vox_size[i]
+        b_sizes[i] = (b_max - b_min) * nii_vox_size[i]        
     
     ## Calculate padded crop size (crop to size of the view with max size) 
     b_max_size = b_sizes.max()
@@ -339,10 +330,12 @@ def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
         b_max = int(np.ceil(b_center + b_half_size))
         b_coors[i, 0] = np.max([0, b_min])           # Correct if start of crop boundary is smaller than 0
         b_coors[i, 1] = np.min([img_dim[i] - 1, b_max])  # Correct if end of crop boundary is larger than img size
-        
+
     ## Crop and reshape all images
     out_arr = []
     for i, tmp_nii in enumerate(nii_arr):
+        logger.info('ITER' + str(i))
+        
         if tmp_nii is None:
             out_arr.append(tmp_nii)
         else:
@@ -621,6 +614,8 @@ img_info_all, out_report):
     ofp.write(TEXT_HTML_MAINPAGE)
     ofp.close()
 
+    logger.info('  Report created: ' + out_report)
+
 
 def create_report(list_file, config_file, out_dir):
 
@@ -683,7 +678,7 @@ def create_report(list_file, config_file, out_dir):
     img_info_all = create_snapshots(params, df_images, dir_snapshots_full)
     
     ### Create report
-    logger.info('  Creating html report ...' )
+    logger.info('  Creating html report ...')
     create_html_report(params, out_dir, dir_subjects_full, dir_snapshots, 
                        dir_snapshots_full, dir_subjects, img_info_all, out_report)
     
