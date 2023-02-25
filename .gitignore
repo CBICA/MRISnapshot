@@ -51,7 +51,7 @@ docs/_build/
 docs/build
 
 # test outputs or tmp
-examples/Output
+examples/output
 Tmp
 
 .*

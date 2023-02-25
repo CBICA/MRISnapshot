@@ -10,19 +10,19 @@ After installation, users can quickly run a small example:
 
 .. code-block:: console
 
-    cd examples/Scripts
+    cd examples/scripts
 
 2. Run the command for data preparation.
 
 .. code-block:: console
 
-    mrisnapshot_prep_data -i ../Input/Scans -s _T1_DS.nii.gz -d ../Output/Test --mask _T1_ICVMASK.nii.gz --olay _T1_ICVMASK.nii.gz --olay2 _T1_BRAINMASK.nii.gz
+    mrisnapshot_prep_data -i ../scans -s _T1_DS.nii.gz -d ../output --mask _T1_ICVMASK.nii.gz --olay _T1_ICVMASK.nii.gz --olay2 _T1_BRAINMASK.nii.gz
 
 3. Run the command for report creation.
 
 .. code-block:: console
 
-    mrisnapshot_create_report -d ../Output/Test
+    mrisnapshot_create_report -d ../output
 
 .. note::
     Alternatively, instead of steps 2 and 3, users can run the example script provided.
@@ -35,13 +35,16 @@ After installation, users can quickly run a small example:
 
 .. code-block:: console
 
-    google-chrome ../Output/Test/QCReport/qcreport.html
+    google-chrome ../output/QCReport/qcreport.html
 
 5. Navigate subjects using **PREV** and **NEXT** buttons (or left and right arrows), and annotate them by editing the QC form fields.
 
 .. |br| raw:: html
 
     <br />
+    
+.. note::
+    Users can click on a snapshot to open a larger image. On the larger image, they can click again to remove/add the overlay masks
     
 6. Save the QC annotations using the **SAVE REPORT** button.
 
