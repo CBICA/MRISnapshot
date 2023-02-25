@@ -16,7 +16,7 @@ After installation, users can quickly run a small example:
 
 .. code-block:: console
 
-    mrisnapshot_prep_data -i ../scans -s _T1_DS.nii.gz -d ../output --mask _T1_ICVMASK.nii.gz --olay _T1_ICVMASK.nii.gz --olay2 _T1_BRAINMASK.nii.gz
+    mrisnapshot_prep_data -i ../scans -s _T1.nii.gz -d ../output --mask _T1_ICVMASK.nii.gz --olay _T1_ICVMASK.nii.gz --olay2 _T1_BRAINMASK.nii.gz
 
 3. Run the command for report creation.
 
