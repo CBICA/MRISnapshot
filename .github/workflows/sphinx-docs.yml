@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-python@v3
       - name: Install dependencies
         run: |
+          pip install -e .
           pip install sphinx sphinx_rtd_theme sphinx-tabs
       - name: Sphinx build
         run: |
