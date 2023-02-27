@@ -18,7 +18,9 @@ jobs:
           pip install sphinx sphinx_rtd_theme
       - name: Sphinx build
         run: |
-          sphinx-build docs/source docs/_build
+          cd docs/
+          sphinx-build source _build
+          cd ..
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v1
         
