@@ -131,14 +131,6 @@ def create_dir(dir_name):
     except:
         sys.exit("\nERROR: Could not create out folder !!!" + '\n');
 
-def create_log_files(outdir):
-    '''Create log files
-    '''
-    
-    #logFile = outdir + os.sep + 'log_' + EXEC_NAME + '_' + startTimePretty + '.stdout'
-    #errFile = outdir + os.sep + 'log_' + EXEC_NAME + '_' + startTimePretty + '.stderr'
-    writeLog(logFile, '''------------------------''')
-
 def copy_edited_js(path_utils, out_dir, report_hdr_txt):
     '''Copy js scripts to QC report folder, while adding hdr text.
     This function was required to modify QC form columns in js
@@ -201,7 +193,7 @@ def read_and_check_images(df_images, params, sub_index, orient = 'LPS'):
             if fname == '':                                     ## Image missing, return with error flag
                 qc_ok_flag = 0
                 qc_msg = 'Missing ' + col_name + ' image'
-                logger.warning('   ' + qc_msg)
+                logger.warning('   ' + qc_msg + ', subject discarded!')
                 return qc_ok_flag, qc_msg, nii_out, fnames_out
                 
             else:
@@ -215,50 +207,22 @@ def read_and_check_images(df_images, params, sub_index, orient = 'LPS'):
                     if ref_affine == []:
                         ref_affine = nii.affine
                     else:
-                        tmp_affine = nii.affine
-                        if (tmp_affine - ref_affine).sum() != 0:
-                            logger.warning('')
-                        
+                        if (ref_affine - nii.affine).sum() != 0:
+                            qc_ok_flag = 0
+                            qc_msg = 'Inconsistent image vs. overlay'
+                            logger.warning('   ' + qc_msg + ', subject discarded!')
+                            return qc_ok_flag, qc_msg, nii_out, fnames_out
                 except:
                     nii = None
                     qc_ok_flag = 0
                     qc_msg = 'Could not read ' + col_name + ' image ' + fname
-                    logger.warning('   ' + qc_msg)
+                    logger.warning('   ' + qc_msg + ', subject discarded!')
                     return qc_ok_flag, qc_msg, nii_out, fnames_out
                         
         nii_out.append(nii)
         fnames_out.append(fname)
         
     return qc_ok_flag, qc_msg, nii_out, fnames_out
-
-
-def get_nifti(df_images, sub_index, col_name, orient = 'LPS'):
-    ''' Read image names from a dataframe, read nifti images and 
-    reorient them"
-    
-    :param df_images: Input dataframe with image names
-    :param sub_index: Index of the current subject
-    :param col_name: Dataframe column (with image name to extract)
-    :param orient: Desired image orientation
-    
-    :return nii: Output nifti image
-    :return img_mat: Image file name
-    '''
-
-    fname = ''
-    nii = None
-    if col_name in df_images:
-        fname = df_images.loc[sub_index][col_name]
-        try:
-            nii = nib.load(fname)
-            orig_ornt = nib.io_orientation(nii.affine)
-            targ_ornt = axcodes2ornt(orient)
-            if np.all(orig_ornt == targ_ornt) == False:
-                transform = ornt_transform(orig_ornt, targ_ornt)
-                nii = nii.as_reoriented(transform)
-        except:
-            nii = None
-    return nii, fname
 
 def get_img_mat(nii, orient = 'LPS'):
     ''' Reorient nifti and get data matrix
@@ -540,6 +504,41 @@ def sel_vals_nifti(in_nii, sel_vals):
     ## Return out nifti    
     return out_nii
 
+def check_foreground_mask(params, nii_mask, nii_olay, nii_olay2):
+    '''Check if mask and overlay images have non-zero foreground voxels for slice selection
+    
+    :param in_nii: Input nifti image
+    :param sel_vals: List of selected values
+    :return out_nii: Output nifti image
+    '''
+
+    qc_ok_flag = 1
+    qc_msg = ''
+
+    if params.num_mask == 1:
+        num_nz_mask = (nii_mask.get_fdata() > 0).sum()
+        if num_nz_mask == 0:
+            qc_ok_flag = 0
+            qc_msg = 'Mask image has 0 foreground voxels'
+            logger.warning('   ' + qc_msg + ', subject discarded!')
+
+    else:
+        if params.num_olay == 1:
+            num_nz_olay1 = (nii_olay.get_fdata() > 0).sum()
+            if num_nz_olay1 == 0:
+                qc_ok_flag = 0
+                qc_msg = 'Overlay image has 0 foreground voxels'
+                logger.warning('   ' + qc_msg + ', subject discarded!')
+        if params.num_olay == 2:
+            num_nz_olay1 = (nii_olay.get_fdata() > 0).sum()
+            num_nz_olay2 = (nii_olay2.get_fdata() > 0).sum()
+            if num_nz_olay1 + num_nz_olay2 == 0:
+                qc_ok_flag = 0
+                qc_msg = 'Overlay images have 0 foreground voxels in total'
+                logger.warning('   ' + qc_msg + ', subject discarded!')
+
+    return qc_ok_flag, qc_msg 
+
 def create_snapshots(params, df_images, dir_snapshots_full, out_dir):
     '''Creates and returns image snapshots and meta-data about snapshots.
     Also creates a QC dataframe to keep QC PASS/FAIL information for initial 
@@ -562,10 +561,10 @@ def create_snapshots(params, df_images, dir_snapshots_full, out_dir):
     ### Snapshots were already extracted, use saved snapshots and meta-data
     fname_img_info_all = os.path.join(dir_snapshots_full, 'img_info_all.pickle')
     if os.path.isfile(fname_img_info_all):
-        logger.info('  Extracted snapshots and meta-data ' + fname_img_info_all + ' already exists, ' +
+        logger.info('  File ' + fname_img_info_all + ' already exists, ' +
                     ' skipping extraction of snapshots')
         logger.warning('  Pre-saved data may be incomplete or incorrect. Please delete ' + 
-                       'the complete QCReport output folder and rerun it to re-create it')
+                       'the complete QCReport output folder and rerun to re-create it')
         try:
             img_info_all = pickle.load(open(fname_img_info_all, "rb"))
         except:
@@ -580,24 +579,18 @@ def create_snapshots(params, df_images, dir_snapshots_full, out_dir):
         img_info_all = [];
         for sub_index, sub_id in enumerate(df_images[params.id_col]):
 
-            ### Read images
-            #logger.info('    Reading images for subject ' + str(sub_index + 1) + ' / ' + str(num_images))
-            #nii_ulay, fname_ulay  = get_nifti(df_images, sub_index, params.ulay_col)
-            #nii_mask, fname_mask  = get_nifti(df_images, sub_index, params.mask_col)
-            #nii_olay, fname_olay  = get_nifti(df_images, sub_index, params.olay_col)
-            #nii_olay2, fname_olay2  = get_nifti(df_images, sub_index, params.olay_col2)
-
             ## Read images
             logger.info('    Reading images for subject ' + str(sub_index + 1) + ' / ' + str(num_images))
             qc_ok_flag, qc_msg, nii_all, fname_all = read_and_check_images(df_images, params, 
                                                                            sub_index, orient = 'LPS')
             
             ## Save image QC info to record QC fail cases, and report them in a QC csv output file
-            qc_ok_flag_all.append(qc_ok_flag)
-            qc_msg_all.append(qc_msg)
+            if qc_ok_flag == 0:
+                qc_ok_flag_all.append(qc_ok_flag)
+                qc_msg_all.append(qc_msg)
             
-            ## Create snapshots only if images passed the QC
-            if qc_ok_flag == 1:
+            ## Create snapshots if images passed the QC
+            else:
                 [nii_ulay, nii_mask, nii_olay, nii_olay2] = nii_all
                 [fname_ulay, fname_mask, fname_olay, fname_olay2] = fname_all
 
@@ -607,66 +600,78 @@ def create_snapshots(params, df_images, dir_snapshots_full, out_dir):
                 if len(params.sel_vals_olay2) > 0:
                     nii_olay2 = sel_vals_nifti(nii_olay2, params.sel_vals_olay2)
 
-                ## Crop input images
-                if params.crop_to_mask == 1:
-                    [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_mask, 
-                                                                        [nii_ulay, nii_mask, 
-                                                                        nii_olay, nii_olay2],
-                                                                        params.padding_ratio)
-                if params.crop_to_olay == 1:
-                    [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_olay, 
-                                                                        [nii_ulay, nii_mask, 
-                                                                        nii_olay, nii_olay2],
-                                                                        params.padding_ratio)
+                ## Check that mask or overlay images have non-zero voxels to select slices
+                qc_ok_flag, qc_msg = check_foreground_mask(params, nii_mask, nii_olay, nii_olay2)
 
-                ## Resize input images
-                interp_order = [1, 0, 0, 0]
-                [nii_ulay, nii_mask, nii_olay, nii_olay2] = resize_nifti([nii_ulay, nii_mask, 
-                                                                        nii_olay, nii_olay2], interp_order)
-
-                # Initialize containers to keep image info
-                snapshot_name_all = []
-                snapshot_caption_all = []
-                list_sel_slices_all = []
-
-                ## Scale ulay image intensities
-                nii_ulay = scale_img_contrast(nii_ulay, nii_mask, params.perc_low, params.perc_high)
-
-                ### Create snapshots for each orientation
-                for view_index, curr_view in enumerate(params.view_plane):
-
-                    ## Get data in selected orientation
-                    img3d_ulay = get_img_mat(nii_ulay, d_orient[curr_view])
-                    img3d_mask = get_img_mat(nii_mask, d_orient[curr_view]) 
-                    img3d_olay = get_img_mat(nii_olay, d_orient[curr_view]) 
-                    img3d_olay2 = get_img_mat(nii_olay2, d_orient[curr_view]) 
-                        
-                    ### Select slices to show
-                    list_sel_slices = calc_sel_slices(img3d_ulay, img3d_mask, img3d_olay, 
-                                                    img3d_olay2, params, sub_index, sub_id)
-                    logger.info('      Selected slices in view ' + str(curr_view) + ' : ' + str(list_sel_slices))
+                ## Save image QC info
+                qc_ok_flag_all.append(qc_ok_flag)
+                qc_msg_all.append(qc_msg)
+                
+                ## Create snapshots if images passed the QC
+                if qc_ok_flag == 1:
                     
-                    for slice_index, curr_slice in enumerate(list_sel_slices):
-                        info_snapshot = extract_snapshot(img3d_ulay, img3d_olay, img3d_olay2, params, 
-                                                        curr_view, curr_slice, slice_index, sub_id, 
-                                                        dir_snapshots_full, list_sel_slices)
-                        snapshot_caption_all.append(info_snapshot[0])
-                        snapshot_name_all.append(info_snapshot[1])
+                    ## Crop input images
+                    if params.crop_to_mask == 1:
+                        [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_mask, 
+                                                                            [nii_ulay, nii_mask, 
+                                                                            nii_olay, nii_olay2],
+                                                                            params.padding_ratio)
+                    if params.crop_to_olay == 1:
+                        [nii_ulay, nii_mask, nii_olay, nii_olay2] = crop_nifti(nii_olay, 
+                                                                            [nii_ulay, nii_mask, 
+                                                                            nii_olay, nii_olay2],
+                                                                            params.padding_ratio)
 
-                    list_sel_slices_all.append(list_sel_slices)
+                    ## Resize input images
+                    interp_order = [1, 0, 0, 0]
+                    [nii_ulay, nii_mask, nii_olay, nii_olay2] = resize_nifti([nii_ulay, nii_mask, 
+                                                                            nii_olay, nii_olay2], interp_order)
+
+                    # Initialize containers to keep image info
+                    snapshot_name_all = []
+                    snapshot_caption_all = []
+                    list_sel_slices_all = []
+
+                    ## Scale ulay image intensities
+                    nii_ulay = scale_img_contrast(nii_ulay, nii_mask, params.perc_low, params.perc_high)
+
+                    ### Create snapshots for each orientation
+                    for view_index, curr_view in enumerate(params.view_plane):
+
+                        ## Get data in selected orientation
+                        img3d_ulay = get_img_mat(nii_ulay, d_orient[curr_view])
+                        img3d_mask = get_img_mat(nii_mask, d_orient[curr_view]) 
+                        img3d_olay = get_img_mat(nii_olay, d_orient[curr_view]) 
+                        img3d_olay2 = get_img_mat(nii_olay2, d_orient[curr_view]) 
+                            
+                        ### Select slices to show
+                        list_sel_slices = calc_sel_slices(img3d_ulay, img3d_mask, img3d_olay, 
+                                                        img3d_olay2, params, sub_index, sub_id)
+                        logger.info('      Selected slices in view ' + str(curr_view) + ' : ' + str(list_sel_slices))
                         
-                ### Keep image information for later creation of html files
-                snapshot_info = {'sub_index' : sub_index, 'sub_id' : sub_id, 
-                                'fname_ulay' : fname_ulay, 'fname_olay' : fname_olay, 
-                                'fname_olay2' : fname_olay2, 'view_plane' : params.view_plane, 
-                                'list_sel_slices_all' : list_sel_slices_all, 
-                                'snapshot_name_all' : snapshot_name_all, 
-                                'snapshot_caption_all' : snapshot_caption_all}
-                    
-                img_info_all.append(snapshot_info)
+                        for slice_index, curr_slice in enumerate(list_sel_slices):
+                            info_snapshot = extract_snapshot(img3d_ulay, img3d_olay, img3d_olay2, params, 
+                                                            curr_view, curr_slice, slice_index, sub_id, 
+                                                            dir_snapshots_full, list_sel_slices)
+                            snapshot_caption_all.append(info_snapshot[0])
+                            snapshot_name_all.append(info_snapshot[1])
+
+                        list_sel_slices_all.append(list_sel_slices)
+                            
+                    ### Keep image information for later creation of html files
+                    snapshot_info = {'sub_index' : sub_index, 'sub_id' : sub_id, 
+                                    'fname_ulay' : fname_ulay, 'fname_olay' : fname_olay, 
+                                    'fname_olay2' : fname_olay2, 'view_plane' : params.view_plane, 
+                                    'list_sel_slices_all' : list_sel_slices_all, 
+                                    'snapshot_name_all' : snapshot_name_all, 
+                                    'snapshot_caption_all' : snapshot_caption_all}
+                        
+                    img_info_all.append(snapshot_info)
 
         ## Save meta-data for the extracted snapshots to a pickle file
         pickle.dump(img_info_all, open( fname_img_info_all, "wb" ) )
+
+        logger.info('  Created snapshots for ' + str(len(img_info_all)) + ' subjects')
 
         ## Create and save output QC dataframe for image information
         df_qc_images = pd.DataFrame(data = {'ScanID' : df_images.ScanID.tolist(), 
@@ -680,11 +685,11 @@ def create_snapshots(params, df_images, dir_snapshots_full, out_dir):
         try:
             fname_out = os.path.join(out_dir, 'log_qc_images_all.csv')
             df_qc_images.to_csv(fname_out, index = False)
-            logger.info('  Image reading QC log for all subjects is saved to: ' + fname_out)
+            logger.info('  QC log saved to: ' + fname_out)
             
             fname_out = os.path.join(out_dir, 'log_qc_images_fail.csv')
             df_qc_images[df_qc_images.qc_ok_flag == 0].to_csv(fname_out, index = False)
-            logger.info('  Image reading QC log for failed subjects is saved to: ' + fname_out)
+            logger.info('  QC log for failed subjects saved to: ' + fname_out)
 
         except:
             logger.warning('  Could not save QC log files for img reading: ' + fname_out)
@@ -893,12 +898,15 @@ def create_report(list_file, config_file, out_dir):
     logger.info('  Creating snapshots ...' )
     img_info_all = create_snapshots(params, df_images, dir_snapshots_full, out_dir)
     
+    ## No image that passes the QC for creating snapshots
+    if len(img_info_all) == 0:
+        logger.info('  No images to display, skipping report creation ...')
     
-    
-    ### Create report
-    logger.info('  Creating html report ...')
-    create_html_report(params, out_dir, dir_subjects_full, dir_snapshots, 
-                       dir_snapshots_full, dir_subjects, img_info_all, out_report)
+    else:
+        ### Create report
+        logger.info('  Creating html report ...')
+        create_html_report(params, out_dir, dir_subjects_full, dir_snapshots, 
+                        dir_snapshots_full, dir_subjects, img_info_all, out_report)
     
 #if __name__ == "__main__":
 def main():
