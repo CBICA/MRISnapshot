@@ -23,11 +23,28 @@ def add_img_names(df, in_dir, suffix, col_name):
     """
 
     if suffix != None:
+        ## Find images with given suffix
         list_img = glob.glob(in_dir + os.sep + '**' + os.sep + '*' + suffix, recursive = True)
         df_new = pd.DataFrame(data = list_img, columns = [col_name])
+        num_all = df_new.shape[0]
+        logger.info('  Found ' + str(num_all) + ' ' + col_name + ' images in the input folder')
+
+        ## Read IDs and eliminate duplicates
         df_new['ScanID'] = df_new[col_name].apply(lambda x : os.path.basename(x).replace(suffix, ''))
         df_new = df_new.drop_duplicates(subset = 'ScanID')        
+        num_nodupl = df_new.shape[0]
+        logger.info('  Found ' + str(num_nodupl) + ' ' + col_name + ' images with unique IDs in the input folder')
+
+        ## Merge with list of underlay scans
         df = df.merge(df_new, how = 'left', left_on = 'ScanID', right_on = 'ScanID')
+        num_match = df[df[col_name].isna() == False].shape[0]
+        if num_match == 0:
+            logger.warning('Found ' + str(num_match) + ' ' + col_name + ' images matching ' + 
+                           'the underlay image IDs in the input folder')
+        else:
+            logger.info('  Found ' + str(num_match) + ' ' + col_name + ' images matching ' + 
+                           'the underlay image IDs in the input folder')
+        
     return df
 
 def prep_dataset(params):
@@ -45,18 +62,34 @@ def prep_dataset(params):
     ## Create a list with underlay and overlay images
     out_list = os.path.join(params.out_dir, 'list_images.csv')
     if os.path.exists(out_list):
-        logger.warning('  Output image list exists. To overwrite it, delete the image list and rerun: ' + out_list)
+        logger.warning('  File ' + out_list + ' already exists, skipping.')
     else:
+        ## Find underlay images
         list_ulay = glob.glob(params.in_dir + os.sep + '**' + os.sep + '*' + params.s_ulay, recursive = True)
         df = pd.DataFrame(data = list_ulay, columns = ['UnderlayImg'])
+        num_all = df.shape[0]
+        logger.info('  Found ' + str(num_all) + ' underlay images in the input folder')
+        
+        ## Read IDs and eliminate duplicates
         df['ScanID'] = df.UnderlayImg.apply(lambda x : os.path.basename(x).replace(params.s_ulay, ''))
         df = df.drop_duplicates(subset = 'ScanID')
         df = df[['ScanID', 'UnderlayImg']]
 
-        ## Find and add mask and overlay images
-        df = add_img_names(df, params.in_dir, params.s_mask, 'MaskImg')
-        df = add_img_names(df, params.in_dir, params.s_olay, 'OverlayImg')
-        df = add_img_names(df, params.in_dir, params.s_olay2, 'OverlayImg2')
+        ### Eliminate scan if ID is empty
+        if df[df.ScanID == ''].shape[0]:
+            logger.warning('  Removing image with empty ScanID from list: ' + 
+                           df[df.ScanID==''].UnderlayImg.values[0])
+            df = df[df.ScanID != '']
+
+        if df.shape[0] == 0:
+            logger.warning('  No underlay images were found in the input folder. Output image list is empty!')
+        else:
+            logger.info('  Found ' + str(df.shape[0]) + ' underlay images with unique IDs in the input folder')
+
+            ## Add mask and overlay images
+            df = add_img_names(df, params.in_dir, params.s_mask, 'MaskImg')
+            df = add_img_names(df, params.in_dir, params.s_olay, 'OverlayImg')
+            df = add_img_names(df, params.in_dir, params.s_olay2, 'OverlayImg2')
 
         ## Create output folder
         if os.path.exists(params.out_dir) == False:
@@ -65,11 +98,12 @@ def prep_dataset(params):
         ## Create output list
         df.to_csv(out_list, index=False)
         logger.info('  Created output list: ' + out_list)
+        
     
     ## Create a default configuration file
     out_config = os.path.join(params.out_dir, 'config.csv')
     if os.path.exists(out_config):
-        logger.warning('  Output config file exists. To overwrite it, delete the config file and rerun: ' + out_config)
+        logger.warning('  File ' + out_config + ' already exists, skipping.')
     else:
         dict_default = {'id_col' : 'ScanID', 
                         'ulay_col' : 'UnderlayImg', 'mask_col' : 'MaskImg', 
@@ -118,12 +152,11 @@ def main():
     """
 
     descr = 'Helper script to prepare input files (image list and configuration file) ' \
-            'required for QC report creation. ' \
-            'After running this script, the user can manually edit the files created in ' \
-            'OUTDIR, and run the command ' \
+            'required for QC report creation. After running this script, the user can ' \
+            'manually edit the files created in OUTDIR, and run the command ' \
             '"snap_create_report [OUTDIR]" to create the QC report for their dataset ' \
             'and selected configuration.\n\n' \
-            'See scripts in: test/Scripts for examples.\n\n'
+            'See https://cbica.github.io/MRISnapshot for usage and examples.\n\n'
 
     ## Create parser
     parser = argparse.ArgumentParser(add_help=False,

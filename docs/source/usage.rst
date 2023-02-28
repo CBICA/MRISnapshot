@@ -59,4 +59,19 @@ The QC report can be viewed using the command:
 
     google-chrome {output_directory}/QCReport/qcreport.html
 
+**4. Logs for missing or problematic images**
 
+QC report creation process aims to be robust. So, problematic cases will not interrupt report creation. If a case fails, 
+this will be reported in a log file with a brief description of the problem, to allow users alternative data 
+verifications. Failure cases are:
+
+* Image missing (underlay, mask or overlay)
+
+* Image could not be read
+
+* Overlay or mask that is used for slice selection has no foreground voxels
+
+
+
+
+    
