@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os, sys
 
 #### Check if the input file exists
 def checkFile(fileName):
