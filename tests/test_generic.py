@@ -14,7 +14,6 @@
 # Assert - check that some invariant is true.
 
 import os
-import mrisnapshot
     
 # This simple, system-level test just runs the command line version of the package as in the example script.
 # "monkeypatch" is a text fixture that lets you change context scoped to the test.
