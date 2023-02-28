@@ -29,7 +29,7 @@ MRISnapshot can be installed using `pip`. We suggest that users install the pack
 
     .. code-block:: console
 
-        conda create -n myenv python=3.8
+        conda create -n mrisnapshot python=3.8
         conda activate mrisnapshot
         conda install pip
     
