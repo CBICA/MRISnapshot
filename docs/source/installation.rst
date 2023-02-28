@@ -21,9 +21,18 @@ MRISnapshot can be installed using `pip`. We suggest that users install the pack
 
 .. code-block:: console
 
-    virtualenv -p python3 MRISnapshot
-    source MRISnapshot/bin/activate
+    virtualenv -p python3 mrisnapshot
+    source mrisnapshot/bin/activate
+    
+.. note::
+    Alternatively, users can also create a conda environment
 
+    .. code-block:: console
+
+        conda create -n myenv python=3.8
+        conda activate mrisnapshot
+        conda install pip
+    
 4. Install package requirements
 
 .. code-block:: console
