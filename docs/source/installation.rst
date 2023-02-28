@@ -4,6 +4,9 @@ Installation
 
 MRISnapshot can be installed using `pip`. We suggest that users install the package in a Python3 virtual environment (or alternatively in a Conda environment). Installation steps are:
 
+
+
+
 1. Clone the project.
 
 .. code-block:: console
@@ -29,23 +32,26 @@ MRISnapshot can be installed using `pip`. We suggest that users install the pack
 
     .. code-block:: console
 
-        conda create -n mrisnapshot python=3.8
+        conda create -n myenv python=3.8
         conda activate mrisnapshot
         conda install pip
     
 4. Install the package
-    We recommend to install the latest version of the package from pypi:
+
+We recommend installation of the latest version of the package directly from pypi:
+
+.. code-block:: console
+    
+    pip install mrisnapshot
+    
+
+Alternatively, the package can be install from the downloaded repository:
 
 .. code-block:: console
 
-    pip install mrisnapshot
+    pip install -r requirements.txt
+    pip install .
 
-    Alternatively, users can install it from the downloaded reporsitory:
-
-    .. code-block:: console
-
-        pip install -r requirements.txt
-        pip install .
 
 5. Check the installation
 
@@ -54,4 +60,5 @@ MRISnapshot can be installed using `pip`. We suggest that users install the pack
     mrisnapshot_prep_data -h
     
     mrisnapshot_create_report -h
+
 
