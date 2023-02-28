@@ -33,17 +33,19 @@ MRISnapshot can be installed using `pip`. We suggest that users install the pack
         conda activate mrisnapshot
         conda install pip
     
-4. Install package requirements
+4. Install the package
+    We recommend to install the latest version of the package from pypi:
 
 .. code-block:: console
 
-    pip install -r requirements.txt
+    pip install mrisnapshot
 
-5. Install the package
+    Alternatively, users can install it from the downloaded reporsitory:
 
-.. code-block:: console
+    .. code-block:: console
 
-    pip install .
+        pip install -r requirements.txt
+        pip install .
 
 5. Check the installation
 
@@ -52,5 +54,4 @@ MRISnapshot can be installed using `pip`. We suggest that users install the pack
     mrisnapshot_prep_data -h
     
     mrisnapshot_create_report -h
-
 
