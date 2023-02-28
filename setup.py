@@ -10,10 +10,10 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / 'README.rst').read_text()
 
 setup(name='mrisnapshot',
-    version='0.0.2-dev',
+    version='0.0.3-dev',
     description='QC tool for verification of datasets with MRI images and derived maps',
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type='text/x-rst',
     url='https://github.com/CBICA/MRISnapshot',
     author='Guray Erus',
     author_email='guray.erus@pennmedicine.upenn.edu',
