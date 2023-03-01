@@ -439,8 +439,6 @@ def crop_nifti(nii_mask, nii_arr, padding_ratio  = 0.1):
     ## Crop and reshape all images
     out_arr = []
     for i, tmp_nii in enumerate(nii_arr):
-        logger.info('ITER' + str(i))
-        
         if tmp_nii is None:
             out_arr.append(tmp_nii)
         else:
@@ -855,6 +853,7 @@ def create_report(list_file, config_file, out_dir):
     logger.info('  Reading image list from: ' + list_file)
     try:
         df_images = pd.read_csv(list_file)
+        df_images = df_images.fillna('') 
         list_col_names = df_images.columns.values
     except:
         sys.exit("\nERROR: Could not read image list file: " + list_file + '\n')
