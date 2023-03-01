@@ -180,7 +180,7 @@ def read_and_check_images(df_images, params, sub_index, orient = 'LPS'):
     fnames_out = []
     col_names = [params.ulay_col, params.mask_col, params.olay_col, params.olay_col2]
     qc_ok_flag = 1
-    qc_msg = ''
+    qc_msg = 'PASS'
     ref_affine = []         ## Check that all images have the same affine (in the same space)
     
     ## Read and check each image 
@@ -513,7 +513,7 @@ def check_foreground_mask(params, nii_mask, nii_olay, nii_olay2):
     '''
 
     qc_ok_flag = 1
-    qc_msg = ''
+    qc_msg = 'PASS'
 
     if params.num_mask == 1:
         num_nz_mask = (nii_mask.get_fdata() > 0).sum()
