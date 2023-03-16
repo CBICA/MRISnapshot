@@ -52,12 +52,14 @@ def parse_config(df_conf, list_col_names):
     cols_default = ['id_col', 'ulay_col', 'mask_col', 'olay_col', 'olay_col2', 'sel_vals_olay', 
                     'sel_vals_olay2', 'view_plane', 'num_slice', 'step_size_slice',
                     'min_vox', 'crop_to_mask', 'crop_to_olay', 'padding_ratio', 'bin_olay', 
+                    'segment_olay', 'num_classes_olay',
                     'is_edge', 'alpha_olay', 'perc_high', 'perc_low', 
                     'is_out_single', 'is_out_noqc', 'img_width',
                     'label_checkbox1', 'label_checkbox2', 'label_editbox']
     vals_default = ['', '', '', '', '', '', 
                     '', 'A', '4', '',
-                    '1', '0', '0', '', '1', 
+                    '1', '0', '0', '', '1',
+                    '0', '0',
                     '1', '1', '99', '1', 
                     '1', '0', '300',
                     'PASS', 'FAIL', 'Notes']
@@ -104,7 +106,8 @@ def parse_config(df_conf, list_col_names):
     params.sel_vals_olay2 = [int(n) for n in params.sel_vals_olay2.split('+') if n != '']
 
     ### Convert numeric args from str to int or float
-    for tmp_arg in ['num_slice', 'step_size_slice', 'min_vox', 'crop_to_mask', 'crop_to_olay', 'bin_olay', 
+    for tmp_arg in ['num_slice', 'step_size_slice', 'min_vox', 'crop_to_mask', 'crop_to_olay', 'bin_olay',
+                    'segment_olay', 'num_classes_olay',
                     'is_edge', 'is_out_single', 'is_out_noqc', 'img_width']:
         if params[tmp_arg] != '':
             params[tmp_arg] = int(params[tmp_arg])
@@ -212,6 +215,7 @@ def read_and_check_images(df_images, params, sub_index, orient = 'LPS'):
                             qc_msg = 'Inconsistent image vs. overlay'
                             logger.warning('   ' + qc_msg + ', subject discarded!')
                             return qc_ok_flag, qc_msg, nii_out, fnames_out
+                    
                 except:
                     nii = None
                     qc_ok_flag = 0
@@ -322,6 +326,37 @@ def scale_img_contrast(nii_img, nii_mask, perc_low, perc_high):
 ']')
     return nii_out
 
+def digitize_olay(nii, num_classes, perc_low = 5, perc_high = 95):
+    '''Simple quick segmentation of overlay image by quantizing intensities.
+    The purpose is to make sure that edge detection on overlay will be smooth. 
+    Bins for digitization will be estimated from robust intensity ranges
+    (using percentile values to exclude outliers)
+    
+    :param nii: Input nifti image
+    :param num_classes: Number of classes (digits) in output image
+    
+    :return nii_out: Output nifti image
+    '''
+    ## Check input img
+    if nii == None:
+        return nii
+    
+    ## Get img data
+    tmp_img = nii.get_fdata()
+    
+    ## Find min and max intensities
+    pmin, pmax = np.percentile(tmp_img.flatten(), [perc_low, perc_high])
+    
+    ## Digitize image
+    tmp_img = np.digitize(tmp_img, np.arange(pmin, pmax, (pmax-pmin)/num_classes))
+    
+    ## Create out nifti
+    nii_out = nib.Nifti1Image(tmp_img, nii.affine, nii.header)
+
+    ## Return out nifti
+    logger.info('      Overlay image segmented to ' + str(num_classes) + ' classes')
+    return nii_out
+
 def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slice, slice_index, 
                      sub_id, dir_snapshots_full, list_sel_slices):
     ''' Extracts an image snapshot based on input parameters, and writes it to 
@@ -345,7 +380,8 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     img2d_ulay = img_ulay[:,:,curr_slice].astype(float)
     
     # Scale underlay image between 0 and 1
-    img2d_ulay = (img2d_ulay - img2d_ulay.min()) / (img2d_ulay.max() - img2d_ulay.min())
+    if img2d_ulay.max() - img2d_ulay.min() > 0:
+        img2d_ulay = (img2d_ulay - img2d_ulay.min()) / (img2d_ulay.max() - img2d_ulay.min())
 
     ## Resize underlay slice
     #img2d_ulay = zoom(img2d_ulay, (scX,scY), order=1)
@@ -632,6 +668,11 @@ def create_snapshots(params, df_images, dir_snapshots_full, out_dir):
 
                     ## Scale ulay image intensities
                     nii_ulay = scale_img_contrast(nii_ulay, nii_mask, params.perc_low, params.perc_high)
+
+                    ## Digitize olay image intensities
+                    if params.segment_olay == 1:
+                        nii_olay = digitize_olay(nii_olay, params.num_classes_olay)
+                        nii_olay2 = digitize_olay(nii_olay2, params.num_classes_olay)
 
                     ### Create snapshots for each orientation
                     for view_index, curr_view in enumerate(params.view_plane):
