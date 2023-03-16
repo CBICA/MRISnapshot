@@ -121,6 +121,20 @@ def parse_config(df_conf, list_col_names):
         params.alpha_olay = 1
         logger.warning('    Parameter alpha_olay is set to 1, because is_edge was set to 1')
 
+    ### Correct inconsistent parameters
+    if (params.segment_olay == 1):
+        if params.num_classes_olay > 10:
+            params.num_classes_olay = 10
+            logger.warning('    Parameter num_classes_olay is set to 10 (max value)')
+        if params.num_classes_olay < 2:
+            params.num_classes_olay = 2
+            logger.warning('    Parameter num_classes_olay is set to 2 (min value)')
+        if params.is_edge == 0:
+            params.is_edge = 1
+            logger.warning('    Parameter is_edge is set to 1, because segment_olay was set to 1')
+        params.alpha_olay = 1
+        logger.warning('    Parameter alpha_olay is set to 1, because is_edge was set to 1')
+
     return params
 
 def create_dir(dir_name):
