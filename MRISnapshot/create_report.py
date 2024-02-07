@@ -216,6 +216,14 @@ def read_and_check_images(df_images, params, sub_index, orient = 'LPS'):
             else:
                 try:
                     nii = nib.load(fname)
+                except:
+                    nii = None
+                    qc_ok_flag = 0
+                    qc_msg = 'Could not read ' + col_name + ' image ' + fname
+                    logger.warning('   ' + qc_msg + ', subject discarded!')
+                    return qc_ok_flag, qc_msg, nii_out, fnames_out
+
+                try:
                     orig_ornt = nib.io_orientation(nii.affine)
                     targ_ornt = axcodes2ornt(orient)
                     if np.all(orig_ornt == targ_ornt) == False:
@@ -224,18 +232,22 @@ def read_and_check_images(df_images, params, sub_index, orient = 'LPS'):
                     if ref_affine == []:
                         ref_affine = nii.affine
                     else:
-                        if (ref_affine - nii.affine).sum() != 0:
+
+                        ## We compare the affine matrix for underlay and overlay images
+                        ##   - we use 3 digit precision
+                        ##     otherwise it may be too sensitive to numeric differences in headers
+                        if (np.abs(ref_affine - nii.affine).sum()) > 0.001:
                             qc_ok_flag = 0
-                            qc_msg = 'Inconsistent image vs. overlay'
+                            qc_msg = 'Inconsistent image vs. overlay: affine matrices in headers not consistent'
                             logger.warning('   ' + qc_msg + ', subject discarded!')
                             return qc_ok_flag, qc_msg, nii_out, fnames_out
-                    
                 except:
                     nii = None
                     qc_ok_flag = 0
-                    qc_msg = 'Could not read ' + col_name + ' image ' + fname
+                    qc_msg = 'Could not reorient ' + col_name + ' image ' + fname
                     logger.warning('   ' + qc_msg + ', subject discarded!')
                     return qc_ok_flag, qc_msg, nii_out, fnames_out
+                    
                         
         nii_out.append(nii)
         fnames_out.append(fname)
