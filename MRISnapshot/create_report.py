@@ -415,7 +415,7 @@ def extract_snapshot(img_ulay, img_olay, img_olay2, params, curr_view, curr_slic
     ### params.num_olay = 1  ## FIXME - just for tmp tests
     
     # Create final images and save
-    snapshot_name = sub_id + '_' + curr_view + '_' + str(slice_index)
+    snapshot_name = str(sub_id) + '_' + str(curr_view) + '_' + str(slice_index)
     
     if params.num_olay == 0:
         pil_under = imolay.singleImage(img2d_ulay)
